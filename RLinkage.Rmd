@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Record linkage
 
 ```{r cars}
-data suaisd 
+data 
 ```
 
 ## Including Plots
