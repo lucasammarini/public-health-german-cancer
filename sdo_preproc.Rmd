@@ -25,11 +25,9 @@ Controllo se ci sono duplicati su *idnum*.
 nrow(sdo[duplicated(sdo$idnum),])
 ```
 
-Poichè *idnum* non ha duplicati, lo imposto come rowname. Eseguo altri aggiustamenti sul tipo dei dati.
+*idnum* non ha duplicati. Eseguo altri aggiustamenti sul tipo dei dati.
 
 ```{r}
-rownames(sdo) <- sdo$idnum
-sdo$idnum <- NULL
 sdo$Prestazione <- as.factor(sdo$Prestazione)
 sdo$ospedale <- as.factor(sdo$ospedale)
 sdo$dataprestazione <- as.Date(sdo$dataprestazione, '%d/%m/%Y')
