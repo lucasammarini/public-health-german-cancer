@@ -11,15 +11,64 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Record linkage
 
 ```{r cars}
-data 
+#data_deaths =read.csv("dataset/Deathregister.csv", header = TRUE, sep =";")
+
+data_sdo = read.csv("dataset/SDO_clean.csv", header = TRUE, sep =",")
+
+data_cancer = read.csv("dataset/cancer_clean.csv", header=TRUE, sep = ",")
+
+dataMerge=merge(data_cancer, data_sdo, by="idnum")
+
+dataMerge$incidenza = as.Date(dataMerge$incidenza, format = "%d/%m/%Y")
+dataMerge$dataprestazione= as.Date(dataMerge$dataprestazione)
+dataMerge$dimissione= as.Date(dataMerge$dimissione)
+
+data_gerH = read.csv("dataset/GermanH.csv", header=TRUE, sep = ";")
+
+dataMerge2 = merge(dataMerge, data_gerH, by='idnum')
+
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
+## Pulizia
 
 ```{r pressure, echo=FALSE}
-plot(pressure)
+dataMerge2$Prestazione <- as.factor(dataMerge2$Prestazione)
+dataMerge2$ospedale <- as.factor(dataMerge2$ospedale)
+dataMerge2$Stadio <- as.factor(dataMerge2$Stadio)
+dataMerge2$tipotumore <- as.factor(dataMerge2$tipotumore)
+dataMerge2$geneticm <- as.factor(dataMerge2$geneticm)
+dataMerge2$smoke <- as.factor(dataMerge2$smoke)
+dataMerge2$sex <- as.factor(dataMerge2$sex)
+dataMerge2$married <- as.factor(dataMerge2$married)
+dataMerge2$kids <- as.factor(dataMerge2$kids)
+dataMerge2$work <- as.factor(dataMerge2$work)
+dataMerge2$education <- as.factor(dataMerge2$education)
+
+summary(dataMerge2)
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+### Criteri di inclusione ed esclusione per il primo indicatore
+
+Criteri di inclusione:
+1. sesso: donna
+2. tumore al seno
+3. Stadio I o II
+4. intervallo di tempo fra diagnosi e intervento = 60 giorni
+5. gennaio 1984 
+6. intervento chirurgico 
+
+
+0/1 per i 60 giorni
+
+```{r}
+dataMerge2$intervallo = as.numeric(dataMerge2$dataprestazione - dataMerge2$incidenza)
+
+summary(dataMerge2$intervallo)
+
+
+
+#hist(dataMerge$intervallo[dataMerge$status==1
+
+```
+
