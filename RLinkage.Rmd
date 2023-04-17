@@ -129,6 +129,7 @@ dataMerge3$married <- as.factor(dataMerge3$married)
 dataMerge3$kids <- as.factor(dataMerge3$kids)
 dataMerge3$work <- as.factor(dataMerge3$work)
 dataMerge3$education <- as.factor(dataMerge3$education)
+dataMerge3$dead <- as.factor(dataMerge3$dead)
 
 #summary(dataMerge3)
 
@@ -138,21 +139,28 @@ dataMerge3$education <- as.factor(dataMerge3$education)
 
 ```{r}
 colon <- dataMerge3[dataMerge3$tipotumore=="colon",]
+length(colon[colon$incidenza>colon$enddate])
+table(colon$dead)
 colon$survtime <- as.numeric(colon$enddate-colon$incidenza)/365.25
 
-fit<-survfit(Surv(survtime, dead) ~1,data=colon)
+fit<-survfit(Surv(survtime, as.numeric(dead)) ~1,data=colon)
 summary(fit)
 plot(fit, xlab='time (days)', ylab='survival probability')
 title('Kaplan Meier estimate (pooled data)')
 
-ggsurvplot(fit, data = colon, risk.table = TRUE, conf.int = TRUE, surv.median.line = "h", censor.size=2.5, risk.table.fontsize = 3.5, censor.shape="|", xlab=("Time (years)"))
+ggsurvplot(fit, data = colon, risk.table = TRUE, conf.int = TRUE, conf.int.fill = "black", conf.int.style = "step", surv.median.line = "h", censor.size=2.5, risk.table.fontsize = 3.5, censor.shape="|", xlab="Time (years)")
 ```
 
-##### 8. Stimare la di sopravvivenza nei primi 5 anni dalla diagnosi per Stadio e effettuare un test d’ipotesi per verificare se l’azzardo di morte sia diverso per stadio di malattia alladiagnosi.
+##### 8. Stimare la sopravvivenza nei primi 5 anni dalla diagnosi per Stadio e    
 
 
 ```{r}
+fit<-survfit(Surv(survtime, as.numeric(dead)) ~ Stadio,data=colon)
+summary(fit)
 
+ggsurvplot(fit, data = colon, risk.table = TRUE, conf.int = TRUE, surv.median.line = "h", pval = TRUE, censor.size=2.5, risk.table.fontsize = 3, risk.table.height = 0.35, censor.shape="|", xlab="Time (years)", legend = "right")
+
+survdiff(Surv(survtime,as.numeric(dead)) ~ Stadio,data=colon)
 ```
 
 ##### 9. Applicare un modello per valutare l’associazione tra sesso e mortalità e interpretare la misura di effetto stimata.
