@@ -47,22 +47,58 @@ dataMerge2$work <- as.factor(dataMerge2$work)
 dataMerge2$education <- as.factor(dataMerge2$education)
 
 summary(dataMerge2)
+
+```
+
+Per costruire l'indicatore, il denominatore deve soddisfare i seguenti critieri di inclusione:
+1. sex: female
+2. tipotumore: seno
+3. Stadio: Stadio II, Stadio III
+4. intervallo di tempo fra diagnosi e intervento = 60 giorni
+5. incidenza: dal 1984-01-01 al 1984-01-31
+6. prestazione: chirurgica
+
+Al numeratore invece, verranno incluse solamente le pazienti che hanno subito un intervento entro 60 giorni dalla data d'incidenza. Verrà quindi creata una nuova variabile binaria per indicare la presenza dell'evento o meno.
+
+```{r}
+#denominatore
+data = dataMerge2[dataMerge2$sex == 'Female',]
+data = data[data$Stadio == 'Stadio II' | data$Stadio == 'Stadio III',]
+data = data[data$tipotumore=='seno', ]
+data = data[data$Prestazione=='chirurgica',]
+summary(data)
+dim(data)
+
+```
+
+La variabile 'incidenza' soddisfa già i criteri di inclusione. Come possiamo notare dalle statistiche descrittive, la data è compresa tra l'11/01/1984 e il 20/01/1984
+
+Al numeratore verranno incluse tutte le pazienti del denominatore che hanno subito l'intervento entro 60 giorni. 
+
+```{r}
+
+data$intervallo = as.numeric(data$dataprestazione - data$incidenza)
+summary(data$intervallo)
+data$mortality60gg = ifelse(data$intervallo <= 60, 1, 0)
+```
+
+```{r}
+T1 = table(data$mortality60gg); T1
+prop.table(T1)
+T1[2]/(T1[2]+T1[1]) #
+
+```
+ L'indicatore è pari a 0.63. La percentuale di interventi entro 60 giorni dalla data di diagnosi è pari al 63%. 
+ 
+##### 3. Calcolare l’indicatore ‘Intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi’ per ospedale e darne rappresentazione grafica, includendo come valore di riferimento nel grafico l’indicatore calcolato sull’intero dataset. Per esempi relativi alla rappresentazione grafica fare riferimento al sito Piano Nazionale Esiti (PNE) o siti analoghi trattati a lezione.
+
+```{r}
+table(data$ospedale)
+
 ```
 
 
-##### 3. Calcolare l’indicatore ‘Intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi’ per ospedale e darne rappresentazione grafica, includendo come valore di riferimento nel grafico l’indicatore calcolato sull’intero dataset. Per esempi relativi alla rappresentazione grafica fare riferimento al sito Piano Nazionale Esiti (PNE) o siti analoghi trattati a lezione.
 
-
-Criteri di inclusione: (commenti nostri)
-1. sesso: donna
-2. tumore al seno
-3. Stadio I o II
-4. intervallo di tempo fra diagnosi e intervento = 60 giorni
-5. gennaio 1984 
-6. intervento chirurgico 
-
-
-0/1 per i 60 giorni
 
 ```{r}
 dataMerge2$intervallo = as.numeric(dataMerge2$dataprestazione - dataMerge2$incidenza)

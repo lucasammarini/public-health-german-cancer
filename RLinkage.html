@@ -429,6 +429,64 @@ summary(dataMerge2)</code></pre>
 ##  3rd Qu.: 54.00  
 ##  Max.   :108.00  
 ## </code></pre>
+<p>Per costruire l’indicatore, il denominatore deve soddisfare i
+seguenti critieri di inclusione: 1. sex: female 2. tipotumore: seno 3.
+Stadio: Stadio II, Stadio III 4. intervallo di tempo fra diagnosi e
+intervento = 60 giorni 5. incidenza: dal 1984-01-01 al 1984-01-31 6.
+prestazione: chirurgica</p>
+<p>Al numeratore invece, verranno incluse solamente le pazienti che
+hanno subito un intervento entro 60 giorni dalla data d’incidenza. Verrà
+quindi creata una nuova variabile binaria per indicare la presenza
+dell’evento o meno.</p>
+<pre class="r"><code>#denominatore
+data = dataMerge2[dataMerge2$sex == &#39;Female&#39;,]
+data = data[data$Stadio == &#39;Stadio II&#39; | data$Stadio == &#39;Stadio III&#39;,]
+data = data[data$tipotumore==&#39;seno&#39;, ]
+data = data[data$Prestazione==&#39;chirurgica&#39;,]
+summary(data)</code></pre>
+<pre><code>##      idnum             Stadio      incidenza            tipotumore  geneticm
+##  Min.   :  18   Stadio I  :  0   Min.   :1984-01-11   altro  :  0   0:261   
+##  1st Qu.: 863   Stadio II :240   1st Qu.:1984-01-13   colon  :  0   1: 30   
+##  Median :2016   Stadio III: 51   Median :1984-01-15   polmone:  0           
+##  Mean   :1910   Stadio IV :  0   Mean   :1984-01-15   seno   :291           
+##  3rd Qu.:2804                    3rd Qu.:1984-01-17                         
+##  Max.   :3850                    Max.   :1984-01-20                         
+##                                                                             
+##          Prestazione  dataprestazione        dimissione            ospedale 
+##  chemioterapica:  0   Min.   :1984-01-29   Min.   :1984-06-26   1      :38  
+##  chirurgica    :291   1st Qu.:1984-02-19   1st Qu.:1984-07-15   4      :38  
+##  radioterapica :  0   Median :1984-03-02   Median :1984-08-02   6      :37  
+##                       Mean   :1984-03-16   Mean   :1984-08-14   8      :37  
+##                       3rd Qu.:1984-04-07   3rd Qu.:1984-09-01   9      :35  
+##                       Max.   :1984-07-27   Max.   :1985-02-06   3      :29  
+##                                                                 (Other):77  
+##  smoke         sex      married    kids      work           education  
+##  no :229   Female:291   no : 56   no :158   no :275   low        :251  
+##  yes: 62   Male  :  0   yes:235   yes:133   yes: 16   medium/high: 40  
+##                                                                        
+##                                                                        
+##                                                                        
+##                                                                        
+##                                                                        
+##       age       
+##  Min.   :29.00  
+##  1st Qu.:39.00  
+##  Median :45.00  
+##  Mean   :47.68  
+##  3rd Qu.:53.00  
+##  Max.   :98.00  
+## </code></pre>
+<pre class="r"><code>dim(data)</code></pre>
+<pre><code>## [1] 291  16</code></pre>
+<p>La variabile ‘incidenza’ soddisfa già i criteri di inclusione. Come
+possiamo notare dalle statistiche descrittive, la data è compresa tra
+l’11/01/1984 e il 20/01/1984</p>
+<p>Al numeratore verranno incluse tutte le pazienti del denominatore che
+hanno subito l’intervento entro 60 giorni.</p>
+<pre class="r"><code>data$intervallo = as.numeric(data$dataprestazione - data$incidenza)
+summary(data$intervallo)</code></pre>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##    9.00   34.00   47.00   61.12   86.00  193.00</code></pre>
 </div>
 <div id="calcolare-lindicatore-intervento-chirurgico-di-asportazione-del-tumore-al-seno-entro-60-giorni-dalla-data-di-diagnosi-per-ospedale-e-darne-rappresentazione-grafica-includendo-come-valore-di-riferimento-nel-grafico-lindicatore-calcolato-sullintero-dataset.-per-esempi-relativi-alla-rappresentazione-grafica-fare-riferimento-al-sito-piano-nazionale-esiti-pne-o-siti-analoghi-trattati-a-lezione." class="section level5">
 <h5>3. Calcolare l’indicatore ‘Intervento chirurgico di asportazione del
@@ -437,10 +495,6 @@ darne rappresentazione grafica, includendo come valore di riferimento
 nel grafico l’indicatore calcolato sull’intero dataset. Per esempi
 relativi alla rappresentazione grafica fare riferimento al sito Piano
 Nazionale Esiti (PNE) o siti analoghi trattati a lezione.</h5>
-<p>Criteri di inclusione: (commenti nostri) 1. sesso: donna 2. tumore al
-seno 3. Stadio I o II 4. intervallo di tempo fra diagnosi e intervento =
-60 giorni 5. gennaio 1984 6. intervento chirurgico</p>
-<p>0/1 per i 60 giorni</p>
 <pre class="r"><code>dataMerge2$intervallo = as.numeric(dataMerge2$dataprestazione - dataMerge2$incidenza)
 
 summary(dataMerge2$intervallo)</code></pre>
