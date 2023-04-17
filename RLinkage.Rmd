@@ -145,8 +145,7 @@ summary(fit)
 plot(fit, xlab='time (days)', ylab='survival probability')
 title('Kaplan Meier estimate (pooled data)')
 
-ggsurvplot(fit, data = colon, risk.table = TRUE, conf.int = TRUE, surv.median.line = "h", censor.size=2.5, risk.table.fontsize = 3.5, legend = "right", censor.shape="|", xlab=("Time (years)"))
-
+ggsurvplot(fit, data = colon, risk.table = TRUE, conf.int = TRUE, surv.median.line = "h", censor.size=2.5, risk.table.fontsize = 3.5, censor.shape="|", xlab=("Time (years)"))
 ```
 
 ##### 8. Stimare la di sopravvivenza nei primi 5 anni dalla diagnosi per Stadio e effettuare un test d’ipotesi per verificare se l’azzardo di morte sia diverso per stadio di malattia alladiagnosi.
