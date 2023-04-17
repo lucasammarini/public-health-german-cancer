@@ -98,30 +98,28 @@ summary(dataMerge2$intervallo)
 ```
 
 
-
-
 ### Record linkage - seconda parte: dal punto 7 in poi
 ##### Considerate ora tutti i tumori al colon insorti nel gennaio 1984. Unire i data-set utili per studiare la mortalità del tumore al colon nei soggetti inclusi nell’estrazione del German health Register (dataset 1).
 
 ```{r}
+library(survival)
+library(ggplot2)
+library(survminer)
+```
+
+```{r}
 #data_deaths =read.csv("dataset/Deathregister.csv", header = TRUE, sep =";")
 
-
 data_death = read.csv("dataset/Deathregister.csv", header = TRUE, sep =";")
-
 data_cancer = read.csv("dataset/cancer_clean.csv", header=TRUE, sep = ",")
-
 dataMerge=merge(data_cancer, data_death, by="idnum")
-
-dataMerge$incidenza = as.Date(dataMerge$incidenza, format = "%d/%m/%Y")
-
 
 data_gerH = read.csv("dataset/German_final.csv", header=TRUE, sep = ",")
 dataMerge3 = merge(dataMerge, data_gerH, by='idnum')
 
-
 ## Pulizia
-
+dataMerge3$incidenza <- as.Date(dataMerge3$incidenza, format = "%d/%m/%Y")
+dataMerge3$enddate <- as.Date(dataMerge3$enddate, format = "%Y-%m-%d")
 dataMerge3$Stadio <- as.factor(dataMerge3$Stadio)
 dataMerge3$tipotumore <- as.factor(dataMerge3$tipotumore)
 dataMerge3$geneticm <- as.factor(dataMerge3$geneticm)
@@ -136,16 +134,20 @@ dataMerge3$education <- as.factor(dataMerge3$education)
 
 ```
 
-
-
-
 ##### 7. Selezionate i record relativi ai tumori al colon e stimate la sopravvivenza a 5 anni. Quanti soggetti sono inclusi nell’analisi? Quanti pazienti sono morti nel periodo di interesse? Riportare graficamente la stima di sopravvivenza nei primi 5 anni dalla diagnosi stimata tramite lo stimatore di Kaplan-Meier.Stimare approssimativamente la sopravvivenza mediana.
 
 ```{r}
+colon <- dataMerge3[dataMerge3$tipotumore=="colon",]
+colon$survtime <- as.numeric(colon$enddate-colon$incidenza)/365.25
 
+fit<-survfit(Surv(survtime, dead) ~1,data=colon)
+summary(fit)
+plot(fit, xlab='time (days)', ylab='survival probability')
+title('Kaplan Meier estimate (pooled data)')
+
+ggsurvplot(fit, data = colon, risk.table = TRUE, conf.int = TRUE, surv.median.line = "h", censor.size=2.5, risk.table.fontsize = 3.5, legend = "right", censor.shape="|", xlab=("Time (years)"))
 
 ```
-
 
 ##### 8. Stimare la di sopravvivenza nei primi 5 anni dalla diagnosi per Stadio e effettuare un test d’ipotesi per verificare se l’azzardo di morte sia diverso per stadio di malattia alladiagnosi.
 
