@@ -91,9 +91,6 @@ data$intervento60gg = ifelse(data$intervallo <= 60, 1, 0)
 T1 = table(data$intervento60gg); T1
 prop.table(T1)
 T1[2]/(T1[2]+T1[1]) #
-
-
-
 ```
  L'indicatore è pari a 0.63. La percentuale di interventi entro 60 giorni dalla data di diagnosi è pari al 63%. 
  
@@ -109,8 +106,6 @@ TT<-table(data$intervento60gg,data$ospedale);TT
 prop.table(TT,2) #indicatore seconda posizione evento 1
 
 
-
-
 data$intervento60gg = as.factor(data$intervento60gg)
 #indicatore grezzo
 ggplot(data, aes(x = ospedale, fill = intervento60gg)) +
@@ -119,8 +114,6 @@ ggplot(data, aes(x = ospedale, fill = intervento60gg)) +
 
 ```
 Si tratta di un indicatore grezzo. 
-
-
 
 ```{r}
 indice <- data %>%
@@ -131,6 +124,7 @@ indice
 
 
 ```
+
 ```{r}
 
 #creo il grafico a barre
@@ -152,7 +146,14 @@ tabella_contingenza <- table(data$education, data$intervento60gg)
 tabella_contingenza
 OR <- (tabella_contingenza[1,1]/tabella_contingenza[1,2])/(tabella_contingenza[2,1]/tabella_contingenza[2,2])
 OR
-epitab(data$education, data$intervento60gg, method = c("oddsratio"))
+epitab(data$education, data$intervento60gg, method = c("oddsratio")) 
+
+modello_logistico_seno <- glm(intervento60gg ~ education, family = binomial(), data = data)
+# Riepilogo del modello
+summary(modello_logistico_seno)
+#Lettura Coefficienti
+exp(cbind("OR" = coef(modello_logistico_seno), confint.default(modello_logistico_seno, level = 0.95)))
+
 ```
 
 ##### 5. Calcolate la stessa misura di effetto, questa volta aggiustata per la sola variabile ‘working’, mediante il metodo Mantel Haenszel. Interpretate il risultato.
@@ -168,7 +169,37 @@ OR_adj
 
 ```{r}
 
+#analisi di regressione logistica
+library(dplyr)
+data$log_intervallo <- log(data$intervallo)
+regressione <- glm(intervento60gg ~ education + smoke + geneticm + Stadio + log_intervallo + ospedale + work, data=data, family=binomial(link='logit'))
+summary(regressione)
+exp(coef(regressione))
 
+
+regressione_1 <- glm(intervento60gg ~ -1+as.factor(education)  , data=data, family=binomial)
+
+
+model_overall_seno <- glm(entro_60_giorni ~ education_bin, data = df_seno, family = binomial())
+exp(cbind("OR" = coef(model_overall_seno), confint.default(model_overall_seno, level = 0.95)))
+#geneticm
+model_adj_seno_geneticm <- glm(entro_60_giorni ~ education_bin + geneticm, data = df_seno, family = binomial())
+exp(cbind("OR" = coef(model_adj_seno_geneticm), confint.default(model_adj_seno_geneticm, level = 0.95)))
+ratio_geneticm = exp(coef(model_overall_seno)['education_bin'])/exp(coef(model_adj_seno_geneticm)['education_bin'])
+#smoke
+model_adj_seno_smoke <- glm(entro_60_giorni ~ education_bin + smoke, data = df_seno, family = binomial())
+exp(cbind("OR" = coef(model_adj_seno_smoke), confint.default(model_adj_seno_smoke, level = 0.95)))
+ratio_smoke = exp(coef(model_overall_seno)['education_bin'])/exp(coef(model_adj_seno_smoke)['education_bin'])
+#age
+class0 <- 1
+class1 <- 35
+class2 <- 50
+class3 <- 70
+class4 <- 100
+df_seno$age_class <- cut(df_seno$age, breaks = c(class0, class1, class2, class3, class4), labels = FALSE)
+model_adj_seno_age <- glm(entro_60_giorni ~ education_bin + age_class, data = df_seno, family = binomial())
+exp(cbind("OR" = coef(model_adj_seno_age), confint.default(model_adj_seno_age, level = 0.95)))
+ratio_age = exp(coef(model_overall_seno)['education_bin'])/exp(coef(model_adj_seno_age)['education_bin'])
 ```
 
 
