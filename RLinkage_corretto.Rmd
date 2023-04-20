@@ -241,11 +241,12 @@ survdiff(Surv(survtime,as.numeric(dead)) ~ Stadio,data=colon)
 ##### 9. Applicare un modello per valutare l’associazione tra sesso e mortalità e interpretare la misura di effetto stimata.
 
 ```{r}
-colon$sex <- ifelse(colon$sex == "female", 0, 1)
+#colon$sex <- ifelse(colon$sex == "Female", 0, 1)
 modello <- glm(dead ~ sex, data = colon, family = binomial(link = "logit"))
 summary(modello)
-OR = exp(0.16911)
-#OR = 1.18 Ciò significa che gli uomini hanno circa il 18% delle probabilità di morire rispetto alle donne, tenendo conto degli altri fattori nel modello.
+exp(cbind("OR" = coef(modello), confint.default(modello, level = 0.95)))
+
+#OR = 1.53 Ciò significa che gli uomini hanno circa il 53% delle probabilità di morire rispetto alle donne, tenendo conto degli altri fattori nel modello.
 ```
 
 ##### 10. Quali variabili sono associate alla mortalità? Riportare le relative stime di effetto con gli intervalli di confidenza.
@@ -253,12 +254,47 @@ OR = exp(0.16911)
 ```{r}
 modello10 <- glm(dead ~ sex + Stadio + geneticm + smoke + married + kids + work + education +age, data = colon, family = binomial(link = "logit"))
 summary(modello10)
+#la prof non mette (link ="logit") non ho idea di che faccia
 #io ho messo dentro tutte le variabili possibili
+#ora provo a creare gli intervalli di confidenza
+exp(cbind("Odds_Ratio" = coef(modello10), confint.default(modello10, level = 0.95)))
 ```
 
 ##### 11. Valutare la presenza di confondenti e/o modificatori di effetto tra le variabili disponibili nel German health register e nel registro tumori nella valutazione dell’associazione tra sesso e mortalità. Se identificate un’interazione tra sesso e un’altra variabile riportare le stime di effetto per maschi e femmine separatamente e commentare il tipo di interazione trovato.
 
 ```{r}
+#il modello di riferimento è quello del punto 9 con un OR di 1.53
+library(epiR)
+
+OR <- exp(modello$coefficients)
+exp(cbind("OR" = coef(modello), confint.default(modello, level = 0.95)))
+
+cont_table <- table(dead = colon$dead, 
+                    sex = colon$sex, 
+                    smoke = colon$smoke)
+
+strat<-epi.2by2(dat=cont_table , method="cohort.count")
+strat$massoc.detail$OR.strata.wald
+
+strat$massoc.detail$OR.homog.brday
+
+
+strat
+
+cont_table <- table(dead = colon$dead, 
+                    sex = colon$sex, 
+                    married = colon$married)
+strat<-epi.2by2(dat=cont_table , method="cohort.count")
+strat$massoc.detail$OR.strata.wald
+strat$massoc.detail$OR.homog.brday
+strat
+
+
+
+model1 <- glm(dead ~ sex, data = colon, family = binomial)
+  summary(model1)
+
+exp(cbind("Odds ratio" = coef(model1), confint.default(model1, level = 0.95)))
 
 
 ```
