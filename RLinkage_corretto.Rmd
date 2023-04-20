@@ -88,9 +88,10 @@ data$intervento60gg = ifelse(data$intervallo <= 60, 1, 0)
 ```
 
 ```{r}
-T1 = table(data$intervento60gg); T1
+T1 = table(data$intervento60gg); T1 #indicatore tumore seno
 prop.table(T1)
-T1[2]/(T1[2]+T1[1]) #
+indicatore = T1[2]/(T1[2]+T1[1]) #
+indicatore
 ```
  L'indicatore è pari a 0.63. La percentuale di interventi entro 60 giorni dalla data di diagnosi è pari al 63%. 
  
@@ -129,12 +130,14 @@ indice
 
 #creo il grafico a barre
 bar_plot = ggplot(indice, aes(x = reorder(ospedale, indice), y = indice)) +
-  geom_bar(stat = "identity", fill = "#1f78b4") +
+  geom_bar(stat = "identity", fill = "darkgreen") +
   xlab("Ospedale") +
   ylab("Indicatore") +
-  ggtitle("Intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla diagnosi per ospedale") +
+  ggtitle("Indicatore per ospedale") +
   theme(plot.title = element_text(size = 14, hjust = 0.5),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  geom_hline(yintercept = indicatore, linetype='dashed', color='black')
+  
 bar_plot
 ```
 
