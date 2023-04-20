@@ -1,0 +1,95 @@
+---
+title: "Exploration & Cleaning"
+author: "Simone Farallo"
+date: "2023-04-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load dataset .
+
+```{r}
+cancer<-read.csv("https://raw.githubusercontent.com/SimoneFarallo/public_helth_simo/main/Cancerregister.csv", header = TRUE, sep =";")
+death<-read.csv("https://github.com/SimoneFarallo/public_helth_simo/raw/main/Deathregister.csv", header = TRUE, sep =";")
+german<-read.csv("https://github.com/SimoneFarallo/public_helth_simo/raw/main/GermanH.csv", header = TRUE, sep =";")
+sdo<-read.csv("https://github.com/SimoneFarallo/public_helth_simo/raw/main/SDO.csv", header = TRUE, sep =";")
+```
+
+```{r}
+View(cancer)
+View(death)
+View(german)
+View(sdo)
+```
+
+# Cleaning
+
+## Cancer
+
+```{r}
+cancer$idnum[duplicated(cancer$idnum)]
+cancer[cancer$idnum== 192,]
+cancer[cancer$idnum== 363,]
+cancer[cancer$idnum== 1933,]
+```
+
+```{r}
+cancer <- cancer[-158, ]
+cancer <- cancer[-305,]
+cancer <- cancer[-1637, ]
+```
+
+```{r}
+#check se li ha levati
+cancer[cancer$idnum== 363,]
+cancer[cancer$idnum== 192,]
+cancer[cancer$idnum== 1933,]
+```
+
+```{r}
+cancer <- data.frame(lapply(cancer, function(x) ifelse(x == "", NA, x)), stringsAsFactors = FALSE)
+
+```
+
+```{r}
+is.na(cancer)
+cancer <- na.omit(cancer)
+```
+
+```{r}
+cancer_clean <- cancer[order(cancer$incidenza),]
+cancer_clean
+```
+
+```{r}
+# Esplorazione dei dati
+summary(cancer)
+str(cancer)
+```
+
+## Death
+```{r}
+summary(death)
+str(death)
+#correzione formato delle variabili 
+death$dead = as.factor(death$dead)
+death$enddate = as.Date(death$enddate, tryFormats = "%Y-%m-%d" )
+summary(death)
+dim(death)
+names(death)
+str(death)
+```
+
+```{r}
+#Check dati mancanti
+sum(is.na(death)) #non ci sono dati mancanti
+```
+```{r}
+#duplicati
+sum(duplicated(death))
+length(unique(death$idnum)) == length(death$idnum) #TRUE - no duplicati
+```
+
