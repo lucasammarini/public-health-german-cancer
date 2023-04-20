@@ -241,13 +241,19 @@ survdiff(Surv(survtime,as.numeric(dead)) ~ Stadio,data=colon)
 ##### 9. Applicare un modello per valutare l’associazione tra sesso e mortalità e interpretare la misura di effetto stimata.
 
 ```{r}
-
+colon$sex <- ifelse(colon$sex == "female", 0, 1)
+modello <- glm(dead ~ sex, data = colon, family = binomial(link = "logit"))
+summary(modello)
+OR = exp(0.16911)
+#OR = 1.18 Ciò significa che gli uomini hanno circa il 18% delle probabilità di morire rispetto alle donne, tenendo conto degli altri fattori nel modello.
 ```
 
 ##### 10. Quali variabili sono associate alla mortalità? Riportare le relative stime di effetto con gli intervalli di confidenza.
 
 ```{r}
-
+modello10 <- glm(dead ~ sex + Stadio + geneticm + smoke + married + kids + work + education +age, data = colon, family = binomial(link = "logit"))
+summary(modello10)
+#io ho messo dentro tutte le variabili possibili
 ```
 
 ##### 11. Valutare la presenza di confondenti e/o modificatori di effetto tra le variabili disponibili nel German health register e nel registro tumori nella valutazione dell’associazione tra sesso e mortalità. Se identificate un’interazione tra sesso e un’altra variabile riportare le stime di effetto per maschi e femmine separatamente e commentare il tipo di interazione trovato.
