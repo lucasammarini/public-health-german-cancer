@@ -137,11 +137,26 @@ dataMerge3$education <- as.factor(dataMerge3$education)
 ##### 7. Selezionate i record relativi ai tumori al colon e stimate la sopravvivenza a 5 anni. Quanti soggetti sono inclusi nell’analisi? Quanti pazienti sono morti nel periodo di interesse? Riportare graficamente la stima di sopravvivenza nei primi 5 anni dalla diagnosi stimata tramite lo stimatore di Kaplan-Meier.Stimare approssimativamente la sopravvivenza mediana.
 
 ```{r}
+<<<<<<< Updated upstream
 library(survival)
 library(ggplot2)
 library(survminer)
 #suddivisione dataset
 #risposta 1 domanda
+=======
+dati_interesse <- subset(dataMerge3, tipotumore == "colon")
+#i soggetti inclusi nell'analisi sono 1304
+colon <- dataMerge3[dataMerge3$tipotumore=="colon",]
+
+colon$survtime <- as.numeric(colon$enddate-colon$incidenza)/365.25
+
+fit<-survfit(Surv(survtime, dead) ~1,data=colon)
+summary(fit)
+plot(fit, xlab='time (days)', ylab='survival probability')
+title('Kaplan Meier estimate (pooled data)')
+
+ggsurvplot(fit, data = colon, risk.table = TRUE, conf.int = TRUE, surv.median.line = "h", censor.size=2.5, risk.table.fontsize = 3.5, legend = "right", censor.shape="|", xlab=("Time (years)"))
+>>>>>>> Stashed changes
 
 colon <- dataMerge3[dataMerge3$tipotumore=="colon",]
 
@@ -162,6 +177,21 @@ ggsurvplot(fit, data = colon, risk.table = TRUE, conf.int = TRUE, surv.median.li
 #risposta 4 domanda (mediana sopravvivenza media)
 #poco meno di 4 anni
 
+table1$enddate <- ymd(table1$enddate)
+
+
+table1 <- data.frame(dati_interesse['enddate'], dati_interesse['dead'])
+
+non va sta curva
+
+fit <- survfit(Surv(table1['enddate'], (table1['dead'])) ~ 1, data=table1)
+
+summary(fit)
+
+Call: survfit(formula = Surv(dati_interesse['enddate'], dati_interesse['dead']) ~ 1, data = table1)
+
+
+summary(table1)
 ```
 1) I soggetti inclusi nell'analisi sono 1304 che altro non è che il risultato di un subset del dataset principale tenendo in considerazione solo i pazienti con il tumore al colon.
 2) Nel periodo di interesse sono morti 707 pazienti.
