@@ -1,7 +1,6 @@
 ---
 title: "Exploration & Cleaning"
 author: "Simone Farallo"
-date: "2023-04-18"
 output: html_document
 ---
 
@@ -9,33 +8,87 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Load dataset .
+Il presente progetto si propone di esaminare quattro dataset relativi alla situazione sanitaria di una piccola cittadina tedesca nel periodo compreso tra il 1984 e il 1988, i dataset che andremo ad analizzare sono:
+
+1.estratto del **German health registry** per l’anno 1984 relativo ad una piccola cittadina
+(dataset reale openData modificato). Le variabili che lo compongono sono le
+seguenti (e sono relative alla situazione del cittadino all’inizio del 1984):
+-idnum: codice identificativo del soggetto
+-smoke (yes or no): se il soggetto fuma
+-sex (Female or Male)
+-married (yes or no): se è coniugato
+-kids (yes or no): se il soggetto ha figli
+-work (yes or no): se lavora
+-education ( no/low = da nessuna a diploma scuola media inferiore;medium/high = diploma scuola media superiore o oltre)
+-age (numerica, in anni)
+
+2. **Registro tumori tedesco**(dataset simulato) relativo al mese di Gennaio
+1984. Le variabili che lo compongono sono le seguenti:
+- idnum: codice identificativo del paziente
+- stadio (I, II, III, IV): stadio del tumore alla diagnosi
+- incidenza: data di diagnosi del tumore
+-tipo di tumore: seno, polmone, colon, altro
+-geneticm: fattore genetico (1=positivo, 0=negativo)
+
+3. **Schede di dimissione ospedaliera** dei soggetti ricoverati in Germania tra gennaio 1984 e
+ottobre 1984 per trattamenti oncologici (dataset simulato):
+-idnum: codice identificativo del soggetto
+- Prestazione: tipo di trattamento ricevuto durante il ricovero (chirurgica, chemioterapica o radioterapica)
+- data prestazione: data del trattamento
+- dimissione: data di dimissione dall’ospedale
+- ospedale: codice univoco dell’ospedale
+
+4. Estratto del **Registro di mortalità** della cittadina tedesca che riporta la mortalità dal 1984 al
+1988 e lo stato in vita alla fine del 1988(dataset simulato):
+-idnum: codice identificativo del cittadino
+-dead: stato in vita alla data enddate
+-enddate: data di ultima osservazione (se dead=1 data di morte)
+
+In questa prima fase  l'obiettivo è quello di riportare le statistiche descrittive in una tabella per ciascun dataset, con particolare attenzione alla presenza di dati mancanti, incongruenze tra date e record ripetuti che potrebbero creare problemi in fase di linkage e analisi. Saranno segnalati nel report i record con dati ripetuti o incongruenze tra date e saranno eliminati per le analisi successive.
+
+
+#Preliminary operation
+
+Installazione e caricamento dei pacchetti
+```{r}
+#install.packages("ggpubr", dependencies=TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(ggpubr)
+```
+
+
+# Loading datasets .
 
 ```{r}
 cancer<-read.csv("https://raw.githubusercontent.com/SimoneFarallo/public_helth_simo/main/Cancerregister.csv", header = TRUE, sep =";")
 death<-read.csv("https://github.com/SimoneFarallo/public_helth_simo/raw/main/Deathregister.csv", header = TRUE, sep =";")
-german<-read.csv("https://github.com/SimoneFarallo/public_helth_simo/raw/main/GermanH.csv", header = TRUE, sep =";")
+GermanH<-read.csv("https://github.com/SimoneFarallo/public_helth_simo/raw/main/GermanH.csv", header = TRUE, sep =";")
 sdo<-read.csv("https://github.com/SimoneFarallo/public_helth_simo/raw/main/SDO.csv", header = TRUE, sep =";")
 ```
+
 
 ```{r}
 View(cancer)
 View(death)
-View(german)
+View(GermanH)
 View(sdo)
 ```
 
-# Cleaning
+# Cleaning & Exploration
 
 ## Cancer
 
+Controllo dei duplicati
 ```{r}
 cancer$idnum[duplicated(cancer$idnum)]
 cancer[cancer$idnum== 192,]
 cancer[cancer$idnum== 363,]
 cancer[cancer$idnum== 1933,]
 ```
-
+Eliminazione dei duplicati
 ```{r}
 cancer <- cancer[-158, ]
 cancer <- cancer[-305,]
@@ -43,34 +96,61 @@ cancer <- cancer[-1637, ]
 ```
 
 ```{r}
-#check se li ha levati
 cancer[cancer$idnum== 363,]
 cancer[cancer$idnum== 192,]
 cancer[cancer$idnum== 1933,]
 ```
-
+Si convertono gli spazi vuoti in valori nulli, poichè essi sono dati mancanti
 ```{r}
 cancer <- data.frame(lapply(cancer, function(x) ifelse(x == "", NA, x)), stringsAsFactors = FALSE)
-
 ```
 
+Controllo dei valori nulli
 ```{r}
-is.na(cancer)
+sum(is.na(cancer))
 cancer <- na.omit(cancer)
 ```
-
+Eliminazione dei valori mancanti
 ```{r}
 cancer_clean <- cancer[order(cancer$incidenza),]
 cancer_clean
 ```
 
+Controllo ed esplorazione del dataset pulito
 ```{r}
-# Esplorazione dei dati
 summary(cancer)
 str(cancer)
 ```
+Ora andiamo ad esplorare il dataset attraverso dei grafici
+1. Istogramma della distribuzione dei pazienti per stadio del tumore:
+
+```{r}
+ggplot(cancer, aes(x=Stadio)) +
+  geom_bar()
+```
+
+Questo grafico mostra la distribuzione dei pazienti per stadio del tumore. 
+
+Grafico a barre della distribuzione dei pazienti per tipo di tumore:
+
+```{r}
+ggplot(cancer, aes(x=tipotumore)) +
+  geom_bar()
+```
+
+Questo grafico mostra la distribuzione dei pazienti per tipo di tumore.
+
+Boxplot della distribuzione delle date di diagnosi per stadio del tumore:
+```{r}
+ggplot(cancer, aes(x=Stadio, y=incidenza)) +
+  geom_boxplot()
+```
+ 
+Questo grafico mostra la distribuzione delle date di diagnosi per stadio del tumore attraverso i boxplot.
+
 
 ## Death
+
 ```{r}
 summary(death)
 str(death)
@@ -91,5 +171,145 @@ sum(is.na(death)) #non ci sono dati mancanti
 #duplicati
 sum(duplicated(death))
 length(unique(death$idnum)) == length(death$idnum) #TRUE - no duplicati
+```
+
+**German**
+
+#Importo il dataset e procedo con un bel summary
+
+
+```{r cars}
+summary(GermanH)
+```
+#Trasformo tutti i valori nulli in 0
+
+```{r}
+GermanH[is.na(GermanH)] <- 0
+```
+
+#Osservo quanti valori pari a 0 (ovvero nulli) presentano le singole colonne
+
+```{r}
+colSums(GermanH == 0)
+```
+#Check del numero di righe differenti e spero siano 7748
+
+
+```{r}
+GermanH_ok <- GermanH[apply(GermanH!=0,1,all),]
+```
+
+```{r}
+colSums(GermanH_ok ==0)
+```
+
+
+```{r}
+nrow(GermanH_ok[duplicated(GermanH$idnum)])
+```
+
+
+
+#Faccio un pò di plot come un bastardo
+
+```{r}
+ggplot(GermanH_ok, aes(smoke)) +
+  geom_bar(fill = "#0073C2FF") 
+ggplot(GermanH_ok, aes(sex)) +
+  geom_bar(fill = "#0073C2FF") 
+ggplot(GermanH_ok, aes(married)) +
+  geom_bar(fill = "#0073C2FF") 
+ggplot(GermanH_ok, aes(kids)) +
+  geom_bar(fill = "#0073C2FF") 
+ggplot(GermanH_ok, aes(work)) +
+  geom_bar(fill = "#0073C2FF") 
+ggplot(GermanH_ok, aes(education)) +
+  geom_bar(fill = "#0073C2FF") 
+ 
+```
+```{r}
+ggplot(GermanH_ok, aes(age)) +
+  geom_bar(fill = "#0073C2FF")
+```
+
+#Sdo
+
+Importo il dataset e ordino le righe secondo la colonna *idnum*.
+
+```{r}
+head(sdo)
+sdo <- sdo[order(sdo$idnum), ]
+```
+
+Controllo se ci sono duplicati su *idnum*.
+
+```{r}
+nrow(sdo[duplicated(sdo$idnum),])
+```
+
+*idnum* non ha duplicati. Eseguo altri aggiustamenti sul tipo dei dati.
+
+```{r}
+sdo$Prestazione <- as.factor(sdo$Prestazione)
+sdo$ospedale <- as.factor(sdo$ospedale)
+sdo$dataprestazione <- as.Date(sdo$dataprestazione, '%d/%m/%Y')
+sdo$dimissione <- as.Date(sdo$dimissione, '%d/%m/%Y')
+```
+
+Ottengo le statistiche dei dati.
+
+```{r}
+summary(sdo)
+```
+
+Cerco i valori nulli.
+
+```{r}
+nrow(sdo[is.na(sdo$Prestazione),])
+nrow(sdo[is.na(sdo$dataprestazione),])
+sdo[is.na(sdo$dataprestazione),]
+nrow(sdo[is.na(sdo$dimissione),])
+sdo[is.na(sdo$dimissione),]
+nrow(sdo[is.na(sdo$ospedale),])
+```
+
+Elimino i valori nulli e controllo che effettivamente non ci siano più.
+
+```{r}
+sdo.no.na <- sdo[!is.na(sdo$dataprestazione) & !is.na(sdo$dimissione), ]
+nrow(sdo.no.na[is.na(sdo.no.na$Prestazione),])
+nrow(sdo.no.na[is.na(sdo.no.na$dataprestazione),])
+nrow(sdo.no.na[is.na(sdo.no.na$dimissione),])
+nrow(sdo.no.na[is.na(sdo.no.na$ospedale),])
+```
+
+Controllo la presenza di incongruenze tra date ed elimino i valori incongruenti.
+
+```{r}
+nrow(sdo.no.na[sdo.no.na$dataprestazione>sdo.no.na$dimissione, ])
+sdo.no.na[sdo.no.na$dataprestazione>sdo.no.na$dimissione, ]
+sdo.ok <- sdo.no.na[sdo.no.na$dataprestazione<sdo.no.na$dimissione, ]
+```
+
+Ottengo nuovamente le statistiche e creo alcuni plot.
+
+```{r}
+summary(sdo.ok)
+```
+
+```{r}
+ggplot(sdo, aes(Prestazione)) +
+  geom_bar(fill = "#0073C2FF") +
+  theme_pubclean()
+```
+
+```{r}
+ggplot(sdo, aes(ospedale)) +
+  geom_bar(fill = "#0073C2FF") +
+  theme_pubclean()
+```
+
+```{r}
+sdo
 ```
 
