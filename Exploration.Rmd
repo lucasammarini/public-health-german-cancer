@@ -118,15 +118,16 @@ cancer_clean
 
 Controllo ed esplorazione del dataset pulito
 ```{r}
-summary(cancer)
-str(cancer)
+summary(cancer_clean)
+str(cancer_clean)
 ```
 Ora andiamo ad esplorare il dataset attraverso dei grafici
 1. Istogramma della distribuzione dei pazienti per stadio del tumore:
 
 ```{r}
-ggplot(cancer, aes(x=Stadio)) +
-  geom_bar()
+ggplot(cancer_clean, aes(x=Stadio, fill=Stadio)) +
+  geom_bar() +
+  ylab("Numero di pazienti")
 ```
 
 Questo grafico mostra la distribuzione dei pazienti per stadio del tumore. 
@@ -134,15 +135,17 @@ Questo grafico mostra la distribuzione dei pazienti per stadio del tumore.
 Grafico a barre della distribuzione dei pazienti per tipo di tumore:
 
 ```{r}
-ggplot(cancer, aes(x=tipotumore)) +
-  geom_bar()
+ggplot(cancer_clean, aes(x=tipotumore, fill=tipotumore)) +
+  geom_bar()+
+  ylab("Numero di pazienti")+
+  xlab("Tipo di tumore")
 ```
 
 Questo grafico mostra la distribuzione dei pazienti per tipo di tumore.
 
 Boxplot della distribuzione delle date di diagnosi per stadio del tumore:
 ```{r}
-ggplot(cancer, aes(x=Stadio, y=incidenza)) +
+ggplot(cancer_clean, aes(x=Stadio, y=incidenza)) +
   geom_boxplot()
 ```
  
@@ -154,7 +157,10 @@ Questo grafico mostra la distribuzione delle date di diagnosi per stadio del tum
 ```{r}
 summary(death)
 str(death)
-#correzione formato delle variabili 
+```
+
+Correzione del formato delle colonne 'dead' e 'enddate'
+```{r}
 death$dead = as.factor(death$dead)
 death$enddate = as.Date(death$enddate, tryFormats = "%Y-%m-%d" )
 summary(death)
@@ -163,15 +169,25 @@ names(death)
 str(death)
 ```
 
+Controllo dei dati mancanti
 ```{r}
-#Check dati mancanti
 sum(is.na(death)) #non ci sono dati mancanti
 ```
+Controllo dei duplicati
 ```{r}
-#duplicati
 sum(duplicated(death))
 length(unique(death$idnum)) == length(death$idnum) #TRUE - no duplicati
 ```
+Esploro il dataset corretto
+```{r}
+ggplot(death, aes(x = dead)) +
+  geom_bar(fill = "blue") +
+  labs(title = "Distribuzione dei decessi", 
+       x = "Stato del paziente (0 = vivo, 1 = morto)", 
+       y = "Numero di pazienti")
+```
+Questo grafico a barre mostra la distribuzione dei decessi con la variabile dicotomica "dead", dove 0 rappresenta i pazienti vivi e 1 rappresenta i pazienti deceduti
+
 
 **German**
 
@@ -180,21 +196,17 @@ length(unique(death$idnum)) == length(death$idnum) #TRUE - no duplicati
 
 ```{r cars}
 summary(GermanH)
+str(GermanH)
 ```
-#Trasformo tutti i valori nulli in 0
-
+Trasformo tutti i valori nulli in 0
 ```{r}
 GermanH[is.na(GermanH)] <- 0
 ```
-
-#Osservo quanti valori pari a 0 (ovvero nulli) presentano le singole colonne
-
+Si analizza quanti valori pari a 0 (ovvero nulli) presentano le singole colonne
 ```{r}
 colSums(GermanH == 0)
 ```
-#Check del numero di righe differenti e spero siano 7748
-
-
+Elimino i valori nulli
 ```{r}
 GermanH_ok <- GermanH[apply(GermanH!=0,1,all),]
 ```
@@ -202,53 +214,59 @@ GermanH_ok <- GermanH[apply(GermanH!=0,1,all),]
 ```{r}
 colSums(GermanH_ok ==0)
 ```
-
-
+Controllo dei duplicati
 ```{r}
 nrow(GermanH_ok[duplicated(GermanH$idnum)])
 ```
-
-
-
-#Faccio un pò di plot come un bastardo
+Esplorazione del dataset pulito
 
 ```{r}
-ggplot(GermanH_ok, aes(smoke)) +
-  geom_bar(fill = "#0073C2FF") 
-ggplot(GermanH_ok, aes(sex)) +
-  geom_bar(fill = "#0073C2FF") 
-ggplot(GermanH_ok, aes(married)) +
-  geom_bar(fill = "#0073C2FF") 
-ggplot(GermanH_ok, aes(kids)) +
-  geom_bar(fill = "#0073C2FF") 
-ggplot(GermanH_ok, aes(work)) +
-  geom_bar(fill = "#0073C2FF") 
-ggplot(GermanH_ok, aes(education)) +
-  geom_bar(fill = "#0073C2FF") 
- 
+colors <- c("#FFA07A", "#ADD8E6")
+```
+
+```{r}
+barplot(table(GermanH_ok$smoke), xlab="Fumatore", ylab="Numero dei pazienti", col= colors)
 ```
 ```{r}
+barplot(table(GermanH_ok$sex), main="Frequenza di genere", xlab="Genere", ylab="Numero dei pazienti", col = colors)
+```
+
+```{r}
+barplot(table(GermanH_ok$married), main="Freqeunza dello stato sociale", xlab="Coniugato", ylab="Numero dei pazienti", col = colors)
+```
+
+```{r}
+barplot(table(GermanH_ok$kids), main="Freqeunza dei pazienti con figli ", xlab="Ha figli?", ylab="Numero dei pazeinti", col= colors)
+```
+```{r}
+barplot(table(GermanH_ok$work), main="Freqeunza dei pazienti che lavorano", xlab="Lavora?", ylab="Numero dei pazienti", col = colors)
+```
+
+
+```{r}
 ggplot(GermanH_ok, aes(age)) +
-  geom_bar(fill = "#0073C2FF")
+  geom_bar(fill = "#0073C2FF")+xlab('Età')+ylab("Numero dei pazienti")
 ```
 
 #Sdo
 
-Importo il dataset e ordino le righe secondo la colonna *idnum*.
 
 ```{r}
-head(sdo)
+summary(sdo)
+str(s)
+```
+Ordinamento del dataset
+```{r}
 sdo <- sdo[order(sdo$idnum), ]
+
 ```
 
-Controllo se ci sono duplicati su *idnum*.
+Controllo dei duplicati
 
 ```{r}
 nrow(sdo[duplicated(sdo$idnum),])
 ```
-
-*idnum* non ha duplicati. Eseguo altri aggiustamenti sul tipo dei dati.
-
+Formattazione delle colonne
 ```{r}
 sdo$Prestazione <- as.factor(sdo$Prestazione)
 sdo$ospedale <- as.factor(sdo$ospedale)
@@ -256,14 +274,11 @@ sdo$dataprestazione <- as.Date(sdo$dataprestazione, '%d/%m/%Y')
 sdo$dimissione <- as.Date(sdo$dimissione, '%d/%m/%Y')
 ```
 
-Ottengo le statistiche dei dati.
 
 ```{r}
 summary(sdo)
 ```
-
-Cerco i valori nulli.
-
+Controllo dei valori nulli
 ```{r}
 nrow(sdo[is.na(sdo$Prestazione),])
 nrow(sdo[is.na(sdo$dataprestazione),])
@@ -273,7 +288,7 @@ sdo[is.na(sdo$dimissione),]
 nrow(sdo[is.na(sdo$ospedale),])
 ```
 
-Elimino i valori nulli e controllo che effettivamente non ci siano più.
+Eliminazione dei valori nulli 
 
 ```{r}
 sdo.no.na <- sdo[!is.na(sdo$dataprestazione) & !is.na(sdo$dimissione), ]
@@ -283,7 +298,7 @@ nrow(sdo.no.na[is.na(sdo.no.na$dimissione),])
 nrow(sdo.no.na[is.na(sdo.no.na$ospedale),])
 ```
 
-Controllo la presenza di incongruenze tra date ed elimino i valori incongruenti.
+Controllo della presenza di incongruenze tra date ed rimozione dei valori incongruenti.
 
 ```{r}
 nrow(sdo.no.na[sdo.no.na$dataprestazione>sdo.no.na$dimissione, ])
@@ -300,16 +315,14 @@ summary(sdo.ok)
 ```{r}
 ggplot(sdo, aes(Prestazione)) +
   geom_bar(fill = "#0073C2FF") +
-  theme_pubclean()
+  theme_pubclean()+ylab("Numero dei pazienti")
 ```
 
 ```{r}
 ggplot(sdo, aes(ospedale)) +
   geom_bar(fill = "#0073C2FF") +
-  theme_pubclean()
+  theme_pubclean()+ylab("Numero dei pazienti")+xlab("Ospedali")
 ```
 
-```{r}
-sdo
-```
+I dataset sono stati tutti puliti e controllati, è stata svolta un analisi epslorativa iniziale ora si può passare alla  fase ddi linkage dei dataset per svolgere gli altri task.
 
