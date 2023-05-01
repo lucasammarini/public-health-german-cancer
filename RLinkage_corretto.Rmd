@@ -333,6 +333,32 @@ exp(cbind("OR" = coef(model_int), confint.default(model_int, level = 0.95)))
 
 anova(model_adj, model_int, test = "LRT")
 
+#preso da ale
+
+effetti_per_sesso <- predict(model_int, newdata = data.frame(sex = c("Female", "Male"), education = c("low", "medium/high")), type = "response")
+effetto_maschi <- predict(model_adj, newdata = data.frame(sex = 'Male', education = colon$education))
+effetto_femmine <- predict(model_adj, newdata = data.frame(sex = 'Female', education = colon$education))
+
+effetto_per_istruzione <- aggregate(cbind(effetto_maschi, effetto_femmine), by = list(colon$education), FUN = mean)
+
+if (effetto_per_istruzione[1, "effetto_maschi"] > effetto_per_istruzione[nrow(effetto_per_istruzione), "effetto_maschi"]) {
+  cat("L'effetto di essere maschi sulla mortalità è maggiore tra coloro che hanno un basso livello di istruzione rispetto a coloro che hanno un alto livello di istruzione.\n")
+} else if (effetto_per_istruzione[1, "effetto_maschi"] < effetto_per_istruzione[nrow(effetto_per_istruzione), "effetto_maschi"]) {
+  cat("L'effetto di essere maschi sulla mortalità è minore tra coloro che hanno un basso livello di istruzione rispetto a coloro che hanno un alto livello di istruzione.\n")
+} else {
+  cat("Non si riscontra alcuna differenza significativa nelle stime di effetto tra i diversi livelli di istruzione.\n")
+}
+
+#prove
+
+colon[colon$age <= 14, "age_group"] <- "0-14"
+colon[colon$age > 14 & colon$age <= 44, "age_group"] <- "15-44"
+colon[colon$age > 44 & colon$age <= 64, "age_group"] <- "45-64"
+colon[colon$age > 64, "age_group"] <- "> 64"
+
+model <- glm(dead ~ yr2007, offset = log(person.years), 
+             data = dat_swp[!is.na(dat_swp$yr2007), ], family = "poisson")
+summary(model)
 
 ```
 
