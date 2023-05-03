@@ -537,6 +537,8 @@ cancer_clean$incidenza &lt;- as.Date(cancer_clean$incidenza, tryFormats = &quot;
 ##  Mean   : 5978   Stadio IV :1686   Mean   :1984-01-15   seno   :2613           
 ##  3rd Qu.: 8968                     3rd Qu.:1984-01-18                          
 ##  Max.   :12000                     Max.   :1984-01-20</code></pre>
+<p>Esportazione del dataset pulito.</p>
+<pre class="r"><code>write.csv(cancer_clean, &quot;dataset/Cancerregister_clean.csv&quot;, row.names= FALSE)</code></pre>
 <p>Si procede all’esplorazione del dataset attraverso alcuni
 grafici.</p>
 <p>Grafico a barre della distribuzione dei pazienti per stadio del
@@ -668,6 +670,8 @@ str(GermanH_ok)</code></pre>
 ##                     Mean   : 48.21  
 ##                     3rd Qu.: 54.00  
 ##                     Max.   :108.00</code></pre>
+<p>Esportazione del dataset pulito.</p>
+<pre class="r"><code>write.csv(GermanH_ok, &quot;dataset/GermanH_clean.csv&quot;, row.names= FALSE)</code></pre>
 <p>Esplorazione del dataset pulito attraverso grafici.</p>
 <pre class="r"><code>colors &lt;- c(&quot;#FFA07A&quot;, &quot;#ADD8E6&quot;)</code></pre>
 <pre class="r"><code>barplot(table(GermanH_ok$smoke), main=&quot;Numero di pazienti per fumo&quot;, xlab=&quot;Fumatore&quot;, ylab=&quot;Numero dei pazienti&quot;, col= colors)</code></pre>
@@ -829,6 +833,8 @@ valori incongruenti.</p>
 ##  3rd Qu.:1984-09-01   6      :1105  
 ##  Max.   :1985-02-12   5      :1103  
 ##                       (Other):3258</code></pre>
+<p>Esportazione del dataset pulito.</p>
+<pre class="r"><code>write.csv(sdo.ok, &quot;dataset/SDO_clean.csv&quot;, row.names= FALSE)</code></pre>
 <p>Esplorazione del dataset pulito attraverso grafici.</p>
 <pre class="r"><code>ggplot(sdo, aes(Prestazione)) +
   geom_bar(fill = &quot;#0073C2FF&quot;) +

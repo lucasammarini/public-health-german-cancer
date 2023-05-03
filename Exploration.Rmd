@@ -126,6 +126,13 @@ str(cancer_clean)
 summary(cancer_clean)
 ```
 
+Esportazione del dataset pulito.
+
+```{r}
+write.csv(cancer_clean, "dataset/Cancerregister_clean.csv", row.names= FALSE)
+```
+
+
 Si procede all'esplorazione del dataset attraverso alcuni grafici.
 
 Grafico a barre della distribuzione dei pazienti per stadio del tumore.
@@ -200,7 +207,6 @@ ggplot(death, aes(x = dead, fill = dead)) +
 
 ## GermanH
 
-
 ```{r cars}
 str(GermanH)
 ```
@@ -241,6 +247,12 @@ GermanH_ok$work <- as.factor(GermanH_ok$work)
 GermanH_ok$education <- as.factor(GermanH_ok$education)
 str(GermanH_ok)
 summary(GermanH_ok)
+```
+
+Esportazione del dataset pulito.
+
+```{r}
+write.csv(GermanH_ok, "dataset/GermanH_clean.csv", row.names= FALSE)
 ```
 
 Esplorazione del dataset pulito attraverso grafici.
@@ -337,6 +349,12 @@ Statistiche del dataset pulito.
 
 ```{r}
 summary(sdo.ok)
+```
+
+Esportazione del dataset pulito.
+
+```{r}
+write.csv(sdo.ok, "dataset/SDO_clean.csv", row.names= FALSE)
 ```
 
 Esplorazione del dataset pulito attraverso grafici.
