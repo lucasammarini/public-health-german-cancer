@@ -12,8 +12,11 @@ knitr::opts_chunk$set(echo = TRUE)
 library(ggplot2)
 library(dplyr)
 library(epitools)
+library(DescTools)
+library(survival)
+library(survminer)
+library(epiR)
 ```
-
 ### Record linkage - prima parte: da 2 a 6
 
 ##### 2. Effettuare il record-linkage con lo scopo di costruire l’indicatore ‘Intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi’ su base mensile per i casi incidenti nel mese di gennaio 1984.
@@ -52,7 +55,6 @@ dataMerge2$work <- as.factor(dataMerge2$work)
 dataMerge2$education <- as.factor(dataMerge2$education)
 
 summary(dataMerge2)
-
 ```
 
 Per costruire l'indicatore, il denominatore deve soddisfare i seguenti critieri di inclusione:
@@ -73,7 +75,6 @@ data = data[data$tipotumore=='seno', ]
 data = data[data$Prestazione=='chirurgica',]
 summary(data)
 dim(data)
-
 ```
 
 La variabile 'incidenza' soddisfa già i criteri di inclusione. Come possiamo notare dalle statistiche descrittive, la data è compresa tra l'11/01/1984 e il 20/01/1984.
@@ -83,10 +84,8 @@ Al numeratore verranno incluse tutte le pazienti del denominatore che hanno subi
 Attraverso il seguente codice, si aggiunge la variabile "intervallo" per calcolare il numero di giorni fra la data di prestazione e la data di incidenza.
 
 ```{r}
-
 data$intervallo = as.numeric(data$dataprestazione - data$incidenza)
 summary(data$intervallo)
-
 ```
 Osservando la nuova variabile 'intervallo' possiamo notare che il tempo minimo di attesa per la prestazione è pari a 9 giorni, invece il tempo massimo di attesa equivale a 193 giorni.
 
@@ -117,7 +116,6 @@ data$intervento60gg = as.factor(data$intervento60gg)
 ggplot(data, aes(x = ospedale, fill = intervento60gg)) +
   geom_bar(position = "fill") +
   theme_classic() 
-
 ```
 
 Come si evince dal grafico sovrastante, gli ospedali 7 e 8 sono quelli con percentuale maggiore relativa alle osservazioni che hanno subito l'evento, rispettivamente pari a 70% e 73%. L'ospedale 1, invece, presenta la percentuale minore di osservazioni che hanno subito l'evento, pari a 53%.
@@ -129,12 +127,9 @@ indice <- data %>%
   group_by(ospedale)%>%
   summarise(indice=sum(intervento60gg == 1)/n())
 indice
-
 ```
 
 ```{r}
-
-#creo il grafico a barre
 bar_plot = ggplot(indice, aes(x = reorder(ospedale, indice), y = indice)) +
   geom_bar(stat = "identity", fill = "darkgreen") +
   xlab("Ospedale") +
@@ -165,7 +160,6 @@ OR
 La misura di effetto che è possibile stimare in questo caso è l'odds ratio, esso ci permette di confrontare le probabilità di un evento tra due gruppi. In particolare, in questo caso si vuole confrontare la probabilità che una donna con un basso livello di educazione abbia un intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla diagnosi con la probabilità che una donna con un medio/alto livello di educazione abbia lo stesso intervento entro lo stesso periodo.
 
 ```{r}
-
 epitab(data$education, data$intervento60gg, method = c("oddsratio")) 
 ```
 Come si evince dal risultato sovrastante, l'odds ratio è pari a 1.05 con un intervallo di confidenza (0.52, 2.13); poiché l'intervallo di confidenza include il valore 1, non è possibile concludere che l'odds ratio sia significativamente diverso da 1.
@@ -177,7 +171,6 @@ modello_logistico_seno <- glm(intervento60gg ~ education, family = binomial(), d
 summary(modello_logistico_seno)
 #Lettura Coefficienti
 exp(cbind("OR" = coef(modello_logistico_seno), confint.default(modello_logistico_seno, level = 0.95)))
-
 ```
 
 I risultati coincidono nei tre metodi utilizzati.
@@ -195,7 +188,6 @@ tabella_contingenza_1
 Per verificare la possibilità di utilizzare l'OR di Mantel Haenszel viene utilizzato il test di Breslow-Day, il quale testa l'omogeneità degli odds ratio nei due gruppi.
 
 ```{r}
-library(DescTools)
 BreslowDayTest(tabella_contingenza_1)
 ```
  
@@ -204,7 +196,6 @@ Il test non rifiuta l'ipotesi nulla di omogeneità; si può proseguire nel calco
 ```{r}
 OR_adj <- mantelhaen.test(tabella_contingenza_1, conf.level = 0.95)
 OR_adj
-
 ```
 L'OR di Mantel Haenszel non è significativamente diverso da 1, controllando per la variabile 'working'. Inoltre, il rapporto fra l' odds ratio crudo e quello di mantel haenszel è pari a circa 1.00. Questo significa che lo stato lavorativo non è un confondente nell'associazione tra il livello di educazione e l'intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi.
 
@@ -221,7 +212,6 @@ modello_gen<- glm(intervento60gg ~ education + geneticm, data = data, family = b
 exp(cbind("OR" = coef(modello_gen), confint.default(modello_gen, level = 0.95)))
 ratio_gen = exp(coef(modello)['educationmedium/high'])/exp(coef(modello_gen)['educationmedium/high'])
 ratio_gen
-
 ```
 
 Una delle variabili che si é ritenuto considerare come confondente è "geneticm". Ciò nonostante, il rapporto fra l'OR crudo e quello di MH è pari a circa 1.00. Ciò significa che non è un confondente.
@@ -256,90 +246,126 @@ ratio_age
 
 Anche in questo caso, la variabile scelta, 'age', non è un confondente.
 
+L'analisi è stata eseguita su tutte le persone del dataset.
+
+```{r}
+dim(data)
+```
+
+Le persone del dataset sono 291.
 
 ### Record linkage - seconda parte: dal punto 7 in poi
 ##### Considerate ora tutti i tumori al colon insorti nel gennaio 1984. Unire i data-set utili per studiare la mortalità del tumore al colon nei soggetti inclusi nell’estrazione del German health Register (dataset 1).
 
 ```{r}
-library(survival)
-library(ggplot2)
-library(survminer)
-library(epiR)
-```
-
-```{r}
-#data_deaths =read.csv("dataset/Deathregister.csv", header = TRUE, sep =";")
-
 data_death = read.csv("dataset/Deathregister.csv", header = TRUE, sep =";")
-data_cancer = read.csv("dataset/cancer_clean.csv", header=TRUE, sep = ",")
-dataMerge=merge(data_cancer, data_death, by="idnum")
+data_cancer = read.csv("dataset/Cancerregister_clean.csv", header=TRUE, sep = ",")
+dataMerge3 = merge(data_cancer, data_death, by="idnum")
 
-data_gerH = read.csv("dataset/German_final.csv", header=TRUE, sep = ",")
-dataMerge3 = merge(dataMerge, data_gerH, by='idnum')
+data_gerH = read.csv("dataset/GermanH_clean.csv", header=TRUE, sep = ",")
+dataMerge4 = merge(dataMerge3, data_gerH, by='idnum')
 
 ## Pulizia
-dataMerge3$incidenza <- as.Date(dataMerge3$incidenza, format = "%d/%m/%Y")
-dataMerge3$enddate <- as.Date(dataMerge3$enddate, format = "%Y-%m-%d")
-dataMerge3$Stadio <- as.factor(dataMerge3$Stadio)
-dataMerge3$tipotumore <- as.factor(dataMerge3$tipotumore)
-dataMerge3$geneticm <- as.factor(dataMerge3$geneticm)
-dataMerge3$smoke <- as.factor(dataMerge3$smoke)
-dataMerge3$sex <- as.factor(dataMerge3$sex)
-dataMerge3$married <- as.factor(dataMerge3$married)
-dataMerge3$kids <- as.factor(dataMerge3$kids)
-dataMerge3$work <- as.factor(dataMerge3$work)
-dataMerge3$education <- as.factor(dataMerge3$education)
-dataMerge3$dead <- as.factor(dataMerge3$dead)
+dataMerge4$incidenza <- as.Date(dataMerge4$incidenza, format = "%Y-%m-%d")
+dataMerge4$enddate <- as.Date(dataMerge4$enddate, format = "%Y-%m-%d")
+dataMerge4$Stadio <- as.factor(dataMerge4$Stadio)
+dataMerge4$tipotumore <- as.factor(dataMerge4$tipotumore)
+dataMerge4$geneticm <- as.factor(dataMerge4$geneticm)
+dataMerge4$smoke <- as.factor(dataMerge4$smoke)
+dataMerge4$sex <- as.factor(dataMerge4$sex)
+dataMerge4$married <- as.factor(dataMerge4$married)
+dataMerge4$kids <- as.factor(dataMerge4$kids)
+dataMerge4$work <- as.factor(dataMerge4$work)
+dataMerge4$education <- as.factor(dataMerge4$education)
+dataMerge4$dead <- as.factor(dataMerge4$dead)
 
-#summary(dataMerge3)
-
+summary(dataMerge4)
 ```
 
-##### 7. Selezionate i record relativi ai tumori al colon e stimate la sopravvivenza a 5 anni. Quanti soggetti sono inclusi nell’analisi? Quanti pazienti sono morti nel periodo di interesse? Riportare graficamente la stima di sopravvivenza nei primi 5 anni dalla diagnosi stimata tramite lo stimatore di Kaplan-Meier.Stimare approssimativamente la sopravvivenza mediana.
+##### 7. Selezionate i record relativi ai tumori al colon e stimate la sopravvivenza a 5 anni. Quanti soggetti sono inclusi nell’analisi? Quanti pazienti sono morti nel periodo di interesse? Riportare graficamente la stima di sopravvivenza nei primi 5 anni dalla diagnosi stimata tramite lo stimatore di Kaplan-Meier. Stimare approssimativamente la sopravvivenza mediana.
 
 ```{r}
-colon <- dataMerge3[dataMerge3$tipotumore=="colon",]
+colon <- dataMerge4[dataMerge4$tipotumore=="colon",]
 length(colon[colon$incidenza>colon$enddate])
+```
+
+```{r}
+dim(colon)
+```
+
+Nell'analisi sono inclusi 1304 soggetti.
+
+```{r}
 table(colon$dead)
+```
+
+Nel periodo di interesse sono morti 707 pazienti.
+
+Si stima la sopravvivenza di Kaplan-Meier, che viene rappresentata graficamente.
+
+```{r}
 colon$survtime <- as.numeric(colon$enddate-colon$incidenza)/365.25
 
 fit<-survfit(Surv(survtime, as.numeric(dead)) ~1,data=colon)
 summary(fit)
-plot(fit, xlab='time (days)', ylab='survival probability')
-title('Kaplan Meier estimate (pooled data)')
 
-ggsurvplot(fit, data = colon, risk.table = TRUE, conf.int = TRUE, conf.int.fill = "black", conf.int.style = "step", surv.median.line = "h", censor.size=2.5, risk.table.fontsize = 3.5, censor.shape="|", xlab="Time (years)")
+ggsurvplot(fit, data = colon, risk.table = TRUE, conf.int = TRUE, conf.int.fill = "black", conf.int.style = "step", surv.median.line = "h", censor.size=2.5, risk.table.fontsize = 3.5, censor.shape=".", xlab="Time (years)")
 ```
 
-##### 8. Stimare la sopravvivenza nei primi 5 anni dalla diagnosi per Stadio e effettuare un test d’ipotesi per verificare se l’azzardo di morte sia diverso per stadio di malattia alladiagnosi.
+Nel grafico è riportata la sopravvivenza nei primi 5 anni calcolata con lo stimatore di Kaplan-Meier.
+
+La sopravvivenza mediana, come si osserva nel grafico, è poco inferiore a 4 anni.
+
+##### 8. Stimare la sopravvivenza nei primi 5 anni dalla diagnosi per Stadio e effettuare un test d’ipotesi per verificare se l’azzardo di morte sia diverso per stadio di malattia alla diagnosi.
+
+Si stima la sopravvivenza di Kaplan-Meier per stadio, che viene rappresentata graficamente.
 
 ```{r}
 fit<-survfit(Surv(survtime, as.numeric(dead)) ~ Stadio,data=colon)
 summary(fit)
 
 ggsurvplot(fit, data = colon, risk.table = TRUE, conf.int = TRUE, surv.median.line = "h", pval = TRUE, censor.size=2.5, risk.table.fontsize = 3, risk.table.height = 0.35, censor.shape="|", xlab="Time (years)", legend = "right")
+```
 
+Dal grafico della sopravvivenza di Kaplan-Meier risulta piuttosto evidente una differenza sul trend della sopravvivenza per stadio.
+
+Si esegue un test di ipotesi log-rank per valutare se la differenza è significativa.
+
+```{r}
 survdiff(Surv(survtime,as.numeric(dead)) ~ Stadio,data=colon)
 ```
 
+Il test ha un p-value inferiore a 2e-16, dunque si rigetta l'ipotesi nulla: la differenza tra le curve è statisticamente significativa.
+
 ##### 9. Applicare un modello per valutare l’associazione tra sesso e mortalità e interpretare la misura di effetto stimata.
 
+Si applica un modello di regressione logistica per valutare l'associazione.
+
 ```{r}
-modello <- glm(dead ~ sex, data = colon, family = binomial(link = "logit"))
+modello <- glm(dead ~ sex, data = colon, family = binomial())
 summary(modello)
-OR = exp(0.16911)
-#OR = 1.18 Ciò significa che gli uomini hanno circa il 18% delle probabilità di morire rispetto alle donne, tenendo conto degli altri fattori nel modello.
+exp(cbind("OR" = coef(modello), confint.default(modello, level = 0.95)))
 ```
+
+La misura di effetto ricavata dal modello è l'ODDS Ratio, pari a 1.53. Ciò significa che gli uomini hanno un valore di ODDS di morte superiore del 50% rispetto alle donne.
 
 ##### 10. Quali variabili sono associate alla mortalità? Riportare le relative stime di effetto con gli intervalli di confidenza.
 
+Per studiare l'associazione tra variabili e mortalità si applica un modello di regressione logistica usando come covariate tutte le variabili del dataset.
+
 ```{r}
-modello10 <- glm(dead ~ sex + Stadio + geneticm + smoke + married + kids + work + education +age, data = colon, family = binomial(link = "logit"))
+modello10 <- glm(dead ~ sex + Stadio + geneticm + smoke + married + kids + work + education + age, data = colon, family = binomial(link = "logit"))
 summary(modello10)
-#io ho messo dentro tutte le variabili possibili
+exp(cbind("OR" = coef(modello10), confint.default(modello10, level = 0.95)))
 ```
 
+Le variabili che hanno una associazione significativa con la mortalità, e quindi un OR significativamente diverso da 1, sono tutte quelle testate ad eccezione di "married", "kids" e "work".
+
 ##### 11. Valutare la presenza di confondenti e/o modificatori di effetto tra le variabili disponibili nel German health register e nel registro tumori nella valutazione dell’associazione tra sesso e mortalità. Se identificate un’interazione tra sesso e un’altra variabile riportare le stime di effetto per maschi e femmine separatamente e commentare il tipo di interazione trovato.
+
+Si studia la correlazione tra morti e sesso, valutando la presenza di confondenti o modificatori tramite stratificazione.
+
+La prima variabile studiata è il fattore genetico.
 
 ```{r}
 cont_table <- table(sex = colon$sex,
@@ -348,10 +374,26 @@ cont_table <- table(sex = colon$sex,
 strat<-epi.2by2(dat=cont_table , method="cohort.count")
 strat$massoc.detail$RR.strata.wald
 strat$massoc.detail$OR.strata.wald
+```
+
+Si osserva una differenza sia tra gli ODDS Ratio che tra i Rischi Relativi. Si verifica se la differenza è significativa tramite il test di omogeneità.
+
+```{r}
 strat$massoc.detail$wRR.homog
 strat$massoc.detail$wOR.homog
-strat
+```
 
+Il test di omogeneità risulta significativo per i Rischi Relativi: il fattore genetico è un modificatore d'effetto per questa misura. Il test di omogeneità sugli OR risulta non significativo.
+
+```{r}
+strat
+```
+
+Il rapporto tra l'OR crudo e l'OR di MH è pari a 1: il fattore genetico non è un confondente per l'OR.
+
+Valitiamo i RR separatamente per sesso.
+
+```{r}
 cont_table <- table(genetic = relevel(colon$geneticm, "1")[colon$sex=="Male"],
                     dead = relevel(colon$dead, "1")[colon$sex=="Male"])
 strat<-epi.2by2(dat=cont_table , method="cohort.count")
@@ -361,7 +403,11 @@ cont_table <- table(genetic = relevel(colon$geneticm, "1")[colon$sex=="Female"],
                     dead = relevel(colon$dead, "1")[colon$sex=="Female"])
 strat<-epi.2by2(dat=cont_table , method="cohort.count")
 strat
+```
 
+L'effetto del fattore genetico negli uomini è maggiore rispetto alle donne: l'interazione è negativa.
+
+```{r}
 cont_table <- table(sex = colon$sex,
                     dead = relevel(colon$dead, "1"),
                     smoke = colon$smoke)
