@@ -27,15 +27,15 @@ Numeratore: tutte le pazienti al denominatore con intervallo tra la data d’inc
 
 data_sdo = read.csv("dataset/SDO_clean.csv", header = TRUE, sep =",")
 
-data_cancer = read.csv("dataset/cancer_clean.csv", header=TRUE, sep = ",")
+data_cancer = read.csv("dataset/Cancerregister_clean.csv", header=TRUE, sep = ",")
 
 dataMerge=merge(data_cancer, data_sdo, by="idnum")
 
-dataMerge$incidenza = as.Date(dataMerge$incidenza, format = "%d/%m/%Y")
+dataMerge$incidenza = as.Date(dataMerge$incidenza, format = "%Y-%m-%d")
 dataMerge$dataprestazione= as.Date(dataMerge$dataprestazione)
 dataMerge$dimissione= as.Date(dataMerge$dimissione)
 
-data_gerH = read.csv("dataset/German_final.csv", header=TRUE, sep = ",")
+data_gerH = read.csv("dataset/GermanH_clean.csv", header=TRUE, sep = ",")
 dataMerge2 = merge(dataMerge, data_gerH, by='idnum')
 
 #pulizia
@@ -76,33 +76,39 @@ dim(data)
 
 ```
 
-La variabile 'incidenza' soddisfa già i criteri di inclusione. Come possiamo notare dalle statistiche descrittive, la data è compresa tra l'11/01/1984 e il 20/01/1984
+La variabile 'incidenza' soddisfa già i criteri di inclusione. Come possiamo notare dalle statistiche descrittive, la data è compresa tra l'11/01/1984 e il 20/01/1984.
 
 Al numeratore verranno incluse tutte le pazienti del denominatore che hanno subito l'intervento entro 60 giorni. 
+
+Attraverso il seguente codice, si aggiunge la variabile "intervallo" per calcolare il numero di giorni fra la data di prestazione e la data di incidenza.
 
 ```{r}
 
 data$intervallo = as.numeric(data$dataprestazione - data$incidenza)
 summary(data$intervallo)
-data$intervento60gg = ifelse(data$intervallo <= 60, 1, 0)
+
 ```
+Osservando la nuova variabile 'intervallo' possiamo notare che il tempo minimo di attesa per la prestazione è pari a 9 giorni, invece il tempo massimo di attesa equivale a 193 giorni.
+
+In seguito, viene creata la variabile binaria 'intervento60gg' per individuare le osservazioni che hanno subito o meno l'intervento entro 60 giorni.
+
 
 ```{r}
-T1 = table(data$intervento60gg); T1
+data$intervento60gg = ifelse(data$intervallo <= 60, 1, 0)
+T1 = table(data$intervento60gg); T1 #indicatore tumore seno
 prop.table(T1)
-T1[2]/(T1[2]+T1[1]) #
+indicatore = T1[2]/(T1[2]+T1[1]) #
+indicatore
 ```
  L'indicatore è pari a 0.63. La percentuale di interventi entro 60 giorni dalla data di diagnosi è pari al 63%. 
  
 ##### 3. Calcolare l’indicatore ‘Intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi’ per ospedale e darne rappresentazione grafica, includendo come valore di riferimento nel grafico l’indicatore calcolato sull’intero dataset. Per esempi relativi alla rappresentazione grafica fare riferimento al sito Piano Nazionale Esiti (PNE) o siti analoghi trattati a lezione.
 
 
-
-
 ```{r}
 table(data$ospedale)
 #indicatore grezzo
-TT<-table(data$intervento60gg,data$ospedale);TT 
+TT<-table(evento = data$intervento60gg, ospedale = data$ospedale);TT 
 prop.table(TT,2) #indicatore seconda posizione evento 1
 
 
@@ -113,15 +119,16 @@ ggplot(data, aes(x = ospedale, fill = intervento60gg)) +
   theme_classic() 
 
 ```
-Si tratta di un indicatore grezzo. 
+
+Come si evince dal grafico sovrastante, gli ospedali 7 e 8 sono quelli con percentuale maggiore relativa alle osservazioni che hanno subito l'evento, rispettivamente pari a 70% e 73%. L'ospedale 1, invece, presenta la percentuale minore di osservazioni che hanno subito l'evento, pari a 53%.
+
+Nella tabella seguente vengono riportati gli indicatori per ospedale.
 
 ```{r}
 indice <- data %>%
   group_by(ospedale)%>%
   summarise(indice=sum(intervento60gg == 1)/n())
-
 indice
-
 
 ```
 
@@ -129,25 +136,42 @@ indice
 
 #creo il grafico a barre
 bar_plot = ggplot(indice, aes(x = reorder(ospedale, indice), y = indice)) +
-  geom_bar(stat = "identity", fill = "#1f78b4") +
+  geom_bar(stat = "identity", fill = "darkgreen") +
   xlab("Ospedale") +
   ylab("Indicatore") +
-  ggtitle("Intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla diagnosi per ospedale") +
+  ggtitle("Indicatore per ospedale") +
   theme(plot.title = element_text(size = 14, hjust = 0.5),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+        axis.text.x = element_text(angle = 0, vjust = 0, hjust=0.5)) +
+  geom_hline(yintercept = indicatore, linetype='dashed', color='black')
+  
 bar_plot
 ```
 
+ 
+Considerando il valore dell'indicatore di riferimento, calcolato in precedenza sull’intero dataset, pari a 0.63, gli ospedali 3, 4, 5, 7, 8 presentano un valore superiore. Invece, gli ospedali 1, 9, 2, 6 presentano un valore inferiore.
 
 ##### 4. Utilizzare il dataset ottenuto per valutare l’associazione a livello individuale tra il livello di educazione ed il valore dell’indicatore ‘Intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi’. Quale misura di effetto è possibile stimare? Calcolate ed interpretate tale misura di effetto grezza. Riportare anche la relativa tabella di contingenza.
+
+
+Per valutare l'associazione tra il livello di educazione e l'intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla diagnosi, è possibile utilizzare una tabella di contingenza dove vengono riportati i valori che indicano il numero di casi che rientrano in ogni combinazione di categoria di educazione e di intervento chirurgico.
+
 
 ```{r}
 tabella_contingenza <- table(data$education, data$intervento60gg)
 tabella_contingenza
 OR <- (tabella_contingenza[1,1]/tabella_contingenza[1,2])/(tabella_contingenza[2,1]/tabella_contingenza[2,2])
 OR
-epitab(data$education, data$intervento60gg, method = c("oddsratio")) 
+```
+La misura di effetto che è possibile stimare in questo caso è l'odds ratio, esso ci permette di confrontare le probabilità di un evento tra due gruppi. In particolare, in questo caso si vuole confrontare la probabilità che una donna con un basso livello di educazione abbia un intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla diagnosi con la probabilità che una donna con un medio/alto livello di educazione abbia lo stesso intervento entro lo stesso periodo.
 
+```{r}
+
+epitab(data$education, data$intervento60gg, method = c("oddsratio")) 
+```
+Come si evince dal risultato sovrastante, l'odds ratio è pari a 1.05 con un intervallo di confidenza (0.52, 2.13); poiché l'intervallo di confidenza include il valore 1, non è possibile concludere che l'odds ratio sia significativamente diverso da 1.
+
+L'odds ratio può essere calcolato anche attraverso un modello logistico:
+```{r}
 modello_logistico_seno <- glm(intervento60gg ~ education, family = binomial(), data = data)
 # Riepilogo del modello
 summary(modello_logistico_seno)
@@ -156,53 +180,81 @@ exp(cbind("OR" = coef(modello_logistico_seno), confint.default(modello_logistico
 
 ```
 
+I risultati coincidono nei tre metodi utilizzati.
+
 ##### 5. Calcolate la stessa misura di effetto, questa volta aggiustata per la sola variabile ‘working’, mediante il metodo Mantel Haenszel. Interpretate il risultato.
 
+
+Per calcolare l'OR tramite il metodo Mantel Haenszel viene costruita una tabella di contingenza per i due gruppi in base allo stato lavorativo. 
+
 ```{r}
-tabella_contingenza_1 <- table(data$education, data$intervento60gg, data$work)
+tabella_contingenza_1 <- table(education = data$education, evento = data$intervento60gg, work = data$work)
+tabella_contingenza_1
+```
+
+Per verificare la possibilità di utilizzare l'OR di Mantel Haenszel viene utilizzato il test di Breslow-Day, il quale testa l'omogeneità degli odds ratio nei due gruppi.
+
+```{r}
+library(DescTools)
+BreslowDayTest(tabella_contingenza_1)
+```
+ 
+Il test non rifiuta l'ipotesi nulla di omogeneità; si può proseguire nel calcolo dell'OR.
+
+```{r}
 OR_adj <- mantelhaen.test(tabella_contingenza_1, conf.level = 0.95)
 OR_adj
 
 ```
+L'OR di Mantel Haenszel non è significativamente diverso da 1, controllando per la variabile 'working'. Inoltre, il rapporto fra l' odds ratio crudo e quello di mantel haenszel è pari a circa 1.00. Questo significa che lo stato lavorativo non è un confondente nell'associazione tra il livello di educazione e l'intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi.
 
 ##### 6. Stimate l’associazione a livello individuale tra il livello di educazione ed il valore dell’indicatore, aggiustata per tutte le variabili disponibili che ritenete opportuno inserire come potenziali confondenti, mediante un modello di regressione logistica. Interpretate i risultati. Su quanti soggetti avete effettuato l’analisi? Quali variabili sono associate all’indicatore? In che modo?
 
 ```{r}
-
 #analisi di regressione logistica
-library(dplyr)
-data$log_intervallo <- log(data$intervallo)
-regressione <- glm(intervento60gg ~ education + smoke + geneticm + Stadio + log_intervallo + ospedale + work, data=data, family=binomial(link='logit'))
-summary(regressione)
-exp(coef(regressione))
 
+modello <- glm(intervento60gg ~ education, data = data, family = binomial())
+exp(cbind("OR" = coef(modello), confint.default(modello, level = 0.95)))
 
-regressione_1 <- glm(intervento60gg ~ -1+as.factor(education)  , data=data, family=binomial)
-
-
-model_overall_seno <- glm(entro_60_giorni ~ education_bin, data = df_seno, family = binomial())
-exp(cbind("OR" = coef(model_overall_seno), confint.default(model_overall_seno, level = 0.95)))
 #geneticm
-model_adj_seno_geneticm <- glm(entro_60_giorni ~ education_bin + geneticm, data = df_seno, family = binomial())
-exp(cbind("OR" = coef(model_adj_seno_geneticm), confint.default(model_adj_seno_geneticm, level = 0.95)))
-ratio_geneticm = exp(coef(model_overall_seno)['education_bin'])/exp(coef(model_adj_seno_geneticm)['education_bin'])
-#smoke
-model_adj_seno_smoke <- glm(entro_60_giorni ~ education_bin + smoke, data = df_seno, family = binomial())
-exp(cbind("OR" = coef(model_adj_seno_smoke), confint.default(model_adj_seno_smoke, level = 0.95)))
-ratio_smoke = exp(coef(model_overall_seno)['education_bin'])/exp(coef(model_adj_seno_smoke)['education_bin'])
-#age
-class0 <- 1
-class1 <- 35
-class2 <- 50
-class3 <- 70
-class4 <- 100
-df_seno$age_class <- cut(df_seno$age, breaks = c(class0, class1, class2, class3, class4), labels = FALSE)
-model_adj_seno_age <- glm(entro_60_giorni ~ education_bin + age_class, data = df_seno, family = binomial())
-exp(cbind("OR" = coef(model_adj_seno_age), confint.default(model_adj_seno_age, level = 0.95)))
-ratio_age = exp(coef(model_overall_seno)['education_bin'])/exp(coef(model_adj_seno_age)['education_bin'])
+modello_gen<- glm(intervento60gg ~ education + geneticm, data = data, family = binomial())
+exp(cbind("OR" = coef(modello_gen), confint.default(modello_gen, level = 0.95)))
+ratio_gen = exp(coef(modello)['educationmedium/high'])/exp(coef(modello_gen)['educationmedium/high'])
+ratio_gen
+
 ```
 
+Una delle variabili che si é ritenuto considerare come confondente è "geneticm". Ciò nonostante, il rapporto fra l'OR crudo e quello di MH è pari a circa 1.00. Ciò significa che non è un confondente.
 
+```{r}
+#smoke
+modello_stadio <- glm(intervento60gg ~ education + Stadio , data = data, family = binomial())
+exp(cbind("OR" = coef(modello_stadio), confint.default(modello_stadio, level = 0.95)))
+ratio_stadio = exp(coef(modello)['educationmedium/high'])/exp(coef(modello_stadio)['educationmedium/high'])
+ratio_stadio
+```
+
+Un'altra variabile presa in considerazione come possibile confondente è "Stadio". Si osserva che, anche in questo caso, il rapporto tra fra l'OR crudo e quello di MH è pari a circa 0.98. Ciò significa che la variabile non è un confondente.
+
+
+Infine,  si va a controllare per la variabile 'age' suddivisa in 5 intervalli. 
+
+```{r}
+#age
+classe_1 <- 28
+classe_2 <- 42
+classe_3 <- 56
+classe_4 <- 70
+classe_5 <- 84
+classe_6 <- 98
+data$age_class <- as.factor(cut(data$age, breaks = c(classe_1, classe_2, classe_3, classe_4, classe_5, classe_6), labels = FALSE))
+modello_age <- glm(intervento60gg ~ education + age_class, data = data, family = binomial())
+exp(cbind("OR" = coef(modello_age), confint.default(modello_age, level = 0.95)))
+ratio_age = exp(coef(modello)['educationmedium/high'])/exp(coef(modello_age)['educationmedium/high'])
+ratio_age
+```
+
+Anche in questo caso, la variabile scelta, 'age', non è un confondente.
 
 
 ### Record linkage - seconda parte: dal punto 7 in poi
