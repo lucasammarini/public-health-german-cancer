@@ -335,14 +335,14 @@ Si esegue un test di ipotesi log-rank per valutare se la differenza è significa
 survdiff(Surv(survtime,as.numeric(dead)) ~ Stadio,data=colon)
 ```
 
-Il test ha un p-value inferiore a 2e-16, dunque si rigetta l'ipotesi nulla: la differenza tra le curve è statisticamente significativa.
+Il test ha un p-value inferiore a 2e-16, dunque si rigetta l'ipotesi nulla: la differenza tra gli azzardi è statisticamente significativa.
 
 ##### 9. Applicare un modello per valutare l’associazione tra sesso e mortalità e interpretare la misura di effetto stimata.
 
 Si applica un modello di regressione logistica per valutare l'associazione.
 
 ```{r}
-modello <- glm(dead ~ sex, data = colon, family = binomial())
+modello <- glm(dead ~ relevel(sex, "Male"), data = colon, family = binomial())
 summary(modello)
 exp(cbind("OR" = coef(modello), confint.default(modello, level = 0.95)))
 ```
@@ -365,109 +365,160 @@ Le variabili che hanno una associazione significativa con la mortalità, e quind
 
 Si studia la correlazione tra morti e sesso, valutando la presenza di confondenti o modificatori tramite stratificazione.
 
-La prima variabile studiata è il fattore genetico.
+La prima variabile studiata come eventuale confondente o modificatore di effetto è il fattore genetico.
 
 ```{r}
-cont_table <- table(sex = colon$sex,
-                    dead = relevel(colon$dead, "1"),
-                    genetic = colon$geneticm)
-strat<-epi.2by2(dat=cont_table , method="cohort.count")
-strat$massoc.detail$RR.strata.wald
-strat$massoc.detail$OR.strata.wald
+cont_table_geneticm <- table(sex = colon$sex,
+                             dead = relevel(colon$dead, "1"),
+                             genetic = colon$geneticm)
+strat_geneticm<-epi.2by2(dat=cont_table_geneticm , method="cohort.count")
+strat_geneticm$massoc.detail$RR.strata.wald
+strat_geneticm$massoc.detail$OR.strata.wald
 ```
 
 Si osserva una differenza sia tra gli ODDS Ratio che tra i Rischi Relativi. Si verifica se la differenza è significativa tramite il test di omogeneità.
 
 ```{r}
-strat$massoc.detail$wRR.homog
-strat$massoc.detail$wOR.homog
+strat_geneticm$massoc.detail$wRR.homog
+strat_geneticm$massoc.detail$wOR.homog
 ```
 
 Il test di omogeneità risulta significativo per i Rischi Relativi: il fattore genetico è un modificatore d'effetto per questa misura. Il test di omogeneità sugli OR risulta non significativo.
 
 ```{r}
-strat
+strat_geneticm
 ```
 
 Il rapporto tra l'OR crudo e l'OR di MH è pari a 1: il fattore genetico non è un confondente per l'OR.
 
-Valitiamo i RR separatamente per sesso.
+Si valutano i RR separatamente per sesso.
 
 ```{r}
-cont_table <- table(genetic = relevel(colon$geneticm, "1")[colon$sex=="Male"],
-                    dead = relevel(colon$dead, "1")[colon$sex=="Male"])
-strat<-epi.2by2(dat=cont_table , method="cohort.count")
-strat
+cont_table_geneticm_male <- table(genetic = relevel(colon$geneticm, "1")[colon$sex=="Male"],
+                                  dead = relevel(colon$dead, "1")[colon$sex=="Male"])
+strat_geneticm_male<-epi.2by2(dat=cont_table_geneticm_male, method="cohort.count")
+strat_geneticm_male
 
-cont_table <- table(genetic = relevel(colon$geneticm, "1")[colon$sex=="Female"],
-                    dead = relevel(colon$dead, "1")[colon$sex=="Female"])
-strat<-epi.2by2(dat=cont_table , method="cohort.count")
-strat
+cont_table_geneticm_female <- table(genetic = relevel(colon$geneticm, "1")[colon$sex=="Female"],
+                                    dead = relevel(colon$dead, "1")[colon$sex=="Female"])
+strat_geneticm_female<-epi.2by2(dat=cont_table_geneticm_female, method="cohort.count")
+strat_geneticm_female
 ```
 
-L'effetto del fattore genetico negli uomini è maggiore rispetto alle donne: l'interazione è negativa.
+L'effetto del fattore genetico negli uomini è maggiore rispetto alle donne: se si considerano gli uomini come classe di riferimento, l'interazione è negativa.
+
+Si studia ora la variabile "smoke".
 
 ```{r}
-cont_table <- table(sex = colon$sex,
-                    dead = relevel(colon$dead, "1"),
-                    smoke = colon$smoke)
-strat<-epi.2by2(dat=cont_table , method="cohort.count")
-strat$massoc.detail$RR.strata.wald
-strat$massoc.detail$OR.strata.wald
-strat$massoc.detail$wRR.homog
-strat$massoc.detail$wOR.homog
-strat
+cont_table_smoke <- table(sex = colon$sex,
+                          dead = relevel(colon$dead, "1"),
+                          smoke = colon$smoke)
+strat_smoke<-epi.2by2(dat=cont_table_smoke , method="cohort.count")
+strat_smoke$massoc.detail$RR.strata.wald
+strat_smoke$massoc.detail$OR.strata.wald
+```
 
-cont_table <- table(sex = colon$sex,
-                    dead = relevel(colon$dead, "1"),
-                    married = colon$married)
-strat<-epi.2by2(dat=cont_table , method="cohort.count")
-strat$massoc.detail$RR.strata.wald
-strat$massoc.detail$OR.strata.wald
-strat$massoc.detail$wRR.homog
-strat$massoc.detail$wOR.homog
-strat
+In questo caso entrambe le misure di effetto sono molto simili in entrambi gli strati. Ci si aspetta che i test non siano significativi.
 
-cont_table <- table(sex = colon$sex,
-                    dead = relevel(colon$dead, "1"),
-                    kids = colon$kids)
-strat<-epi.2by2(dat=cont_table , method="cohort.count")
-strat$massoc.detail$RR.strata.wald
-strat$massoc.detail$OR.strata.wald
-strat$massoc.detail$wRR.homog
-strat$massoc.detail$wOR.homog
-strat
+```{r}
+strat_smoke$massoc.detail$wRR.homog
+strat_smoke$massoc.detail$wOR.homog
+```
 
-cont_table <- table(sex = colon$sex,
-                    dead = relevel(colon$dead, "1"),
-                    work = colon$work)
-strat<-epi.2by2(dat=cont_table , method="cohort.count")
-strat$massoc.detail$RR.strata.wald
-strat$massoc.detail$OR.strata.wald
-strat$massoc.detail$wRR.homog
-strat$massoc.detail$wOR.homog
-strat
+In entrambi i casi i test non sono significativi: la variabile non è un modificatore di effetto ed è possibile calcolare una misura di effetto comune tramite il metodo di Mantel Haenszel.
 
-cont_table <- table(sex = colon$sex,
-                    dead = relevel(colon$dead, "1"),
-                    education = colon$education)
-strat<-epi.2by2(dat=cont_table , method="cohort.count")
-strat$massoc.detail$RR.strata.wald
-strat$massoc.detail$OR.strata.wald
-strat$massoc.detail$wRR.homog
-strat$massoc.detail$wOR.homog
-strat
+```{r}
+strat_smoke
+```
 
-cont_table <- table(education = relevel(colon$education, "medium/high")[colon$sex=="Male"],
-                    dead = relevel(colon$dead, "1")[colon$sex=="Male"])
-strat<-epi.2by2(dat=cont_table , method="cohort.count")
-strat
+Dal rapporto tra l'OR crudo e quello di MH, si evince che la variabile "smoke" non è un confondente per questa misura di effetto. Analogamente accade per il RR. 
 
-cont_table <- table(education = relevel(colon$education, "medium/high")[colon$sex=="Female"],
-                    dead = relevel(colon$dead, "1")[colon$sex=="Female"])
-strat<-epi.2by2(dat=cont_table , method="cohort.count")
-strat
+Si procede ora alla valutazione della variabile "married".
 
+```{r}
+cont_table_married <- table(sex = colon$sex,
+                            dead = relevel(colon$dead, "1"),
+                            married = colon$married)
+strat_married<-epi.2by2(dat=cont_table_married , method="cohort.count")
+strat_married$massoc.detail$RR.strata.wald
+strat_married$massoc.detail$OR.strata.wald
+strat_married$massoc.detail$wRR.homog
+strat_married$massoc.detail$wOR.homog
+strat_married
+```
+
+Si osserva che la variabile non è un confondente né un modificatore di effetto per nessuna delle due misure di effetto calcolate.
+
+Si procede ora alla valutazione della variabile "kids".
+
+```{r}
+cont_table_kids <- table(sex = colon$sex,
+                         dead = relevel(colon$dead, "1"),
+                         kids = colon$kids)
+strat_kids<-epi.2by2(dat=cont_table_kids , method="cohort.count")
+strat_kids$massoc.detail$RR.strata.wald
+strat_kids$massoc.detail$OR.strata.wald
+strat_kids$massoc.detail$wRR.homog
+strat_kids$massoc.detail$wOR.homog
+strat_kids
+```
+
+La variabile non è né confondente né modificatore di effetto.
+
+Si procede ora alla valutazione della variabile "work".
+
+```{r}
+cont_table_work <- table(sex = colon$sex,
+                         dead = relevel(colon$dead, "1"),
+                         work = colon$work)
+strat_work<-epi.2by2(dat=cont_table_work , method="cohort.count")
+strat_work$massoc.detail$RR.strata.wald
+strat_work$massoc.detail$OR.strata.wald
+strat_work$massoc.detail$wRR.homog
+strat_work$massoc.detail$wOR.homog
+strat_work
+```
+
+La variabile non è né confondente né modificatore di effetto.
+
+Si procede ora alla valutazione della variabile "education".
+
+```{r}
+cont_table_education <- table(sex = colon$sex,
+                              dead = relevel(colon$dead, "1"),
+                              education = colon$education)
+strat_education<-epi.2by2(dat=cont_table_education , method="cohort.count")
+strat_education$massoc.detail$RR.strata.wald
+strat_education$massoc.detail$OR.strata.wald
+strat_education$massoc.detail$wRR.homog
+strat_education$massoc.detail$wOR.homog
+```
+
+Il test sull'omogeneità dei Rischi Relativi è significativo: la variabile potrebbe essere un modificatore di effetto per il RR.
+
+```{r}
+strat_education
+```
+
+"education" non è un confondente per l'OR.
+
+Si procede a stimare il RR per maschi e femmine separatamente.
+
+```{r}
+cont_table_education_male <- table(education = relevel(colon$education, "medium/high")[colon$sex=="Male"],
+                                   dead = relevel(colon$dead, "1")[colon$sex=="Male"])
+strat_education_male<-epi.2by2(dat=cont_table_education_male, method="cohort.count")
+strat_education_male
+
+cont_table_education_female <- table(education = relevel(colon$education, "medium/high")[colon$sex=="Female"],
+                                     dead = relevel(colon$dead, "1")[colon$sex=="Female"])
+strat_education_female<-epi.2by2(dat=cont_table_education_female, method="cohort.count")
+strat_education_male
+```
+
+Il RR è uguale per maschi e femmine: il sesso non modifica l'effetto dell'educazione. Risulta inoltre che l'associazione tra educazione e mortalità non è significativa.
+
+```{r}
 cont_table <- table(sex = colon$sex,
                     dead = relevel(colon$dead, "1"),
                     stadio = colon$Stadio)
