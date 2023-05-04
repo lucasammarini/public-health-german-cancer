@@ -513,35 +513,41 @@ strat_education_male
 cont_table_education_female <- table(education = relevel(colon$education, "medium/high")[colon$sex=="Female"],
                                      dead = relevel(colon$dead, "1")[colon$sex=="Female"])
 strat_education_female<-epi.2by2(dat=cont_table_education_female, method="cohort.count")
-strat_education_male
+strat_education_female
 ```
 
-Il RR è uguale per maschi e femmine: il sesso non modifica l'effetto dell'educazione. Risulta inoltre che l'associazione tra educazione e mortalità non è significativa.
+L'effetto dell'educazione negli uomini è maggiore rispetto alle donne: se si considerano gli uomini come classe di riferimento, l'interazione è negativa.
+
+Si procede ora alla valutazione della variabile "Stadio".
 
 ```{r}
-cont_table <- table(sex = colon$sex,
+cont_table_stadio <- table(sex = colon$sex,
                     dead = relevel(colon$dead, "1"),
                     stadio = colon$Stadio)
-strat<-epi.2by2(dat=cont_table , method="cohort.count")
-strat$massoc.detail$RR.strata.wald
-strat$massoc.detail$OR.strata.wald
-strat$massoc.detail$wRR.homog
-strat$massoc.detail$wOR.homog
-strat
+strat_stadio<-epi.2by2(dat=cont_table_stadio , method="cohort.count")
+strat_stadio$massoc.detail$RR.strata.wald
+strat_stadio$massoc.detail$OR.strata.wald
+strat_stadio$massoc.detail$wRR.homog
+strat_stadio$massoc.detail$wOR.homog
+strat_stadio
+```
 
-model <- glm(dead ~ relevel(sex, "Male")+Stadio, data=colon, family="binomial")
-summary(model)
-model2 <- glm(dead ~ relevel(sex, "Male")*Stadio, data=colon, family="binomial")
-summary(model2)
-anova(model,model2,test="LRT")
+I test di omogeneità risultano significativi per entrambe le misure di effetto. Si procede al calcolo del valore dell'effetto separatamente per maschi e femmine.
 
-model <- glm(dead ~ Stadio, data=colon[colon$sex=="Male",], family="binomial")
-summary(model)
-exp(cbind("Odds ratio" = coef(model), confint.default(model, level = 0.95)))
+```{r}
+# model <- glm(dead ~ relevel(sex, "Male")+Stadio, data=colon, family="binomial")
+# summary(model)
+# model2 <- glm(dead ~ relevel(sex, "Male")*Stadio, data=colon, family="binomial")
+# summary(model2)
+# anova(model,model2,test="LRT")
 
-model <- glm(dead ~ Stadio, data=colon[colon$sex=="Female",], family="binomial")
-summary(model)
-exp(cbind("Odds ratio" = coef(model), confint.default(model, level = 0.95)))
+model_male <- glm(dead ~ Stadio, data=colon[colon$sex=="Male",], family="binomial")
+summary(model_male)
+exp(cbind("Odds ratio" = coef(model_male), confint.default(model_male, level = 0.95)))
+
+model_female <- glm(dead ~ Stadio, data=colon[colon$sex=="Female",], family="binomial")
+summary(model_female)
+exp(cbind("Odds ratio" = coef(model_female), confint.default(model_female, level = 0.95)))
 
 # model <- glm(dead ~ Stadio, data=colon[colon$sex=="Male",], family=binomial(link="log"), maxit = 100)
 # exp(cbind("Relative risk" = coef(model), confint.default(model, level = 0.95)))
@@ -551,14 +557,21 @@ exp(cbind("Odds ratio" = coef(model), confint.default(model, level = 0.95)))
 # 
 # model <- glm(dead ~ Stadio, data=colon[colon$sex=="Female",], family="binomial"(link="log"), maxit = 100)
 # exp(cbind("Relative risk" = coef(model), confint.default(model, level = 0.95)))
+```
 
-model <- glm(as.numeric(dead) ~ relevel(sex, "Male") + as.factor(age), data=colon, family="poisson")
+Gli uomini hanno un OR maggiore tra Stadio 1 e 2 e tra Stadio 1 e 3 rispetto alle donne. Hanno invece un OR minore tra Stadio 1 e 4 rispetto alle donne.
+
+Si procede ora alla valutazione della variabile "age".
+
+```{r}
+model <- glm(dead ~ relevel(sex, "Male") + age, data=colon, family="binomial")
 summary(model)
-model2 <- glm(as.numeric(dead) ~ relevel(sex, "Male")*as.factor(age), data=colon, family="poisson")
+model2 <- glm(dead ~ relevel(sex, "Male") * age, data=colon, family="binomial")
 summary(model2)
 anova(model,model2,test="LRT")
-
 ```
+
+Si osserva che l'interazione non è significativa: age non è un modificatore di effetto. BISOGNA STIMARE SE È UN CONFONDENTE CONFRONTANDO GLI OR GREZZO E DI MH.
 
 ##### 12. A seguito delle considerazioni effettuate nei punti precedenti scegliete un modello finale per valutare i fattori di rischio della mortalità dopo diagnosi di tumore al colon e commentate i risultati.
 
