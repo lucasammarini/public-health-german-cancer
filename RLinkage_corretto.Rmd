@@ -494,7 +494,7 @@ strat_education$massoc.detail$wRR.homog
 strat_education$massoc.detail$wOR.homog
 ```
 
-Il test sull'omogeneità dei Rischi Relativi è significativo: la variabile potrebbe essere un modificatore di effetto per il RR.
+Il test sull'omogeneità dei Rischi Relativi è significativo: la variabile è un modificatore di effetto per il RR.
 
 ```{r}
 strat_education
@@ -535,31 +535,28 @@ strat_stadio
 I test di omogeneità risultano significativi per entrambe le misure di effetto. Si procede al calcolo del valore dell'effetto separatamente per maschi e femmine.
 
 ```{r}
-# model <- glm(dead ~ relevel(sex, "Male")+Stadio, data=colon, family="binomial")
-# summary(model)
-# model2 <- glm(dead ~ relevel(sex, "Male")*Stadio, data=colon, family="binomial")
-# summary(model2)
-# anova(model,model2,test="LRT")
+model_bin_male <- glm(dead ~ Stadio, data=colon[colon$sex=="Male",], family="binomial")
+summary(model_bin_male)
+exp(cbind("Odds ratio" = coef(model_bin_male), confint.default(model_bin_male, level = 0.95)))
 
-model_male <- glm(dead ~ Stadio, data=colon[colon$sex=="Male",], family="binomial")
-summary(model_male)
-exp(cbind("Odds ratio" = coef(model_male), confint.default(model_male, level = 0.95)))
-
-model_female <- glm(dead ~ Stadio, data=colon[colon$sex=="Female",], family="binomial")
-summary(model_female)
-exp(cbind("Odds ratio" = coef(model_female), confint.default(model_female, level = 0.95)))
-
-# model <- glm(dead ~ Stadio, data=colon[colon$sex=="Male",], family=binomial(link="log"), maxit = 100)
-# exp(cbind("Relative risk" = coef(model), confint.default(model, level = 0.95)))
-# 
-# model <- glm(dead ~ Stadio, data=colon, family=binomial(link="log"), maxit = 100)
-# exp(cbind("Relative risk" = coef(model), confint.default(model, level = 0.95)))
-# 
-# model <- glm(dead ~ Stadio, data=colon[colon$sex=="Female",], family="binomial"(link="log"), maxit = 100)
-# exp(cbind("Relative risk" = coef(model), confint.default(model, level = 0.95)))
+model_bin_female <- glm(dead ~ Stadio, data=colon[colon$sex=="Female",], family="binomial")
+summary(model_bin_female)
+exp(cbind("Odds ratio" = coef(model_bin_female), confint.default(model_bin_female, level = 0.95)))
 ```
 
-Gli uomini hanno un OR maggiore tra Stadio 1 e 2 e tra Stadio 1 e 3 rispetto alle donne. Hanno invece un OR minore tra Stadio 1 e 4 rispetto alle donne.
+Gli uomini hanno un OR minore tra Stadio 1 e 2 e tra Stadio 1 e 3 rispetto alle donne. Hanno invece un OR maggiore tra Stadio 1 e 4 rispetto alle donne.
+
+Si procede alla stima dei RR.
+
+```{r}
+model_pois_male <- glm(I(as.numeric(dead)-1) ~ Stadio, data = colon[colon$sex=="Male",], family = poisson)
+exp(cbind("Relative risk" = coef(model_pois_male), confint.default(model_pois_male, level = 0.95)))
+
+model_pois_female <- glm(I(as.numeric(dead)-1) ~ Stadio, data = colon[colon$sex=="Female",], family = poisson)
+exp(cbind("Relative risk" = coef(model_pois_female), confint.default(model_pois_female, level = 0.95)))
+```
+
+Gli uomini hanno in tutti i casi un RR minore rispetto alle donne: prendendo come riferimento il livello "Male", si ha dunque una interazione negativa.
 
 Si procede ora alla valutazione della variabile "age".
 
@@ -571,10 +568,43 @@ summary(model2)
 anova(model,model2,test="LRT")
 ```
 
-Si osserva che l'interazione non è significativa: age non è un modificatore di effetto. BISOGNA STIMARE SE È UN CONFONDENTE CONFRONTANDO GLI OR GREZZO E DI MH.
+Si osserva che l'interazione non è significativa, secondo il test LRT: age non è un modificatore di effetto.
+
+```{r}
+model3 <- glm(dead ~ relevel(sex, "Male"), data=colon, family="binomial")
+or_crude <- exp(cbind("Crude Odds ratio" = coef(model3), confint.default(model3, level = 0.95)))
+or_mh <- exp(cbind("MH Odds ratio" = coef(model), confint.default(model, level = 0.95)))
+ratio <- or_crude[2]/or_mh[2]
+ratio
+```
+
+Il rapporto tra i due OR è pari a 1.08. Tenendo come valore limite per il confondimento uno scostamento del 10%, è possibile affermare che non c'è confondimento da parte della variabile "age".
+
+Risultano quindi modificatori di effetto le variabili "geneticm", "education" e "Stadio".
 
 ##### 12. A seguito delle considerazioni effettuate nei punti precedenti scegliete un modello finale per valutare i fattori di rischio della mortalità dopo diagnosi di tumore al colon e commentate i risultati.
 
-```{r}
+Poiché lo studio è uno studio di mortalità, si utilizza il modello di Cox per tenere conto anche dei diversi tempi di mortalità. Come covariate si scelgono le variabili risultate significative nel punto 10. La variabile sex è aggiustata per i confondenti osservati al punto 11.
 
+```{r}
+model_cox <- coxph(Surv(survtime, I(as.numeric(dead)-1)) ~ relevel(sex, "Male") + geneticm + education + Stadio + smoke + age, data=colon)
+summary(model_cox)
 ```
+
+Il modello di Cox assume che l'Hazard Ratio rimanga costante nel tempo. Si verifica graficamente questo assunto, iniziando dalla variabile sex.
+
+```{r}
+stima <- survfit(Surv(survtime, I(as.numeric(dead)-1)) ~ relevel(sex, "Male"), data=colon)
+
+check <- log(-log(stima[sex=1]$surv))
+plot(stima[sex=1]$time, check, type='l', xlab='time', ylab='log(-log(S(t)))', col="blue")
+points(stima[sex=1]$time, check, pch=".", cex=3, col="blue")
+
+check <- log(-log(stima[sex=2]$surv))
+lines(stima[sex=2]$time, check, type='l', col="red")
+points(stima[sex=2]$time, check, pch=".", cex=3, col="red")
+
+legend(x=3.5, y=-4.5, col=c("blue", "red"), legend=c("Male", "Female"), lwd=1)
+```
+
+Palesemente la distanza non è costante. Da capire cosa fare.
