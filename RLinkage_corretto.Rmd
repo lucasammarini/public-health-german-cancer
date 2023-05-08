@@ -24,7 +24,7 @@ Denominatore: tutte le pazienti di sesso femminile con tumore al seno insorto tr
 01/01/1984 e 31/01/1984, in stadio I o II, che hanno subito un intervento chirurgico
 Numeratore: tutte le pazienti al denominatore con intervallo tra la data d’incidenza e la data dell’intervento ≤60 giorni
 
-```{r cars}
+```{r}
 #data_deaths =read.csv("dataset/Deathregister.csv", header = TRUE, sep =";")
 
 
@@ -584,27 +584,53 @@ Risultano quindi modificatori di effetto le variabili "geneticm", "education" e 
 
 ##### 12. A seguito delle considerazioni effettuate nei punti precedenti scegliete un modello finale per valutare i fattori di rischio della mortalità dopo diagnosi di tumore al colon e commentate i risultati.
 
-Poiché lo studio è uno studio di mortalità, si utilizza il modello di Cox per tenere conto anche dei diversi tempi di mortalità. Come covariate si scelgono le variabili risultate significative nel punto 10. La variabile sex è aggiustata per i confondenti osservati al punto 11.
+Poiché lo studio è uno studio di mortalità, si utilizza il modello di Cox per tenere conto anche dei diversi tempi di mortalità. Come covariate si scelgono le variabili risultate significative nel punto 10.
 
 ```{r}
 model_cox <- coxph(Surv(survtime, I(as.numeric(dead)-1)) ~ relevel(sex, "Male") + geneticm + education + Stadio + smoke + age, data=colon)
 summary(model_cox)
 ```
 
-Il modello di Cox assume che l'Hazard Ratio rimanga costante nel tempo. Si verifica graficamente questo assunto, iniziando dalla variabile sex.
+I test di ipotesi riportano che il modello di Cox è significativo. In particolare, risultano significative le variabili "sex", "geneticm", "Stadio", "age". "education" è al limite della significatività. "smoke" risulta non significativamente associata.
+
+L'Hazard Ratio risulta significativamente superiore a 1 per le variabili "geneticm", "Stadio III", "Stadio IV" e "age". Queste variabili sono positivamente associate con il rischio di mortalità. L'Hazard Ratio risulta invece significativamente inferiore a 1 per la variabile "sex". Le restanti variabili hanno un Hazard Ratio non significativamente diverso da 1. 
+
+Il modello di Cox assume che l'Hazard Ratio rimanga costante nel tempo. Si verifica questo assunto.
 
 ```{r}
-stima <- survfit(Surv(survtime, I(as.numeric(dead)-1)) ~ relevel(sex, "Male"), data=colon)
-
-check <- log(-log(stima[sex=1]$surv))
-plot(stima[sex=1]$time, check, type='l', xlab='time', ylab='log(-log(S(t)))', col="blue")
-points(stima[sex=1]$time, check, pch=".", cex=3, col="blue")
-
-check <- log(-log(stima[sex=2]$surv))
-lines(stima[sex=2]$time, check, type='l', col="red")
-points(stima[sex=2]$time, check, pch=".", cex=3, col="red")
-
-legend(x=3.5, y=-4.5, col=c("blue", "red"), legend=c("Male", "Female"), lwd=1)
+ph_test <- cox.zph(model_cox)
+print(ph_test)
+par(mfrow=c(2,1), mar=c(4,5,1,1))
+plot(ph_test)
 ```
 
-Palesemente la distanza non è costante. Da capire cosa fare.
+L'assunto è verificato per tutte le variabili prese singolarmente e per il modello nel suo complesso. Infatti, dai dati si può notare come il p-value non risulti significativo.
+
+Si inseriscono ora nel modello le modifiche di effetto studiate nel punto 11.
+
+```{r}
+model_cox_2 <- coxph(Surv(survtime, I(as.numeric(dead)-1)) ~ relevel(sex, "Male") * geneticm + relevel(sex, "Male") * education + relevel(sex, "Male") * Stadio + smoke + age, data=colon)
+summary(model_cox_2)
+```
+
+I test di ipotesi riportano che il modello di Cox è significativo.
+In particolare, risultano significative le variabili "sex", "geneticm", "Stadio" per il quarto livello e "age".
+"education" e "smoke" risultano non significativamente associate.
+In merito alle interazioni inserite nel modello, risultano significative quelle tra "sex" e "Stadio II" e tra "sex" e "Stadio III".
+
+L'Hazard Ratio risulta significativamente superiore a 1 per le variabili "geneticm", "Stadio IV" e "age" e per le interazioni tra "sex" e "Stadio II" e tra "sex" e "Stadio III". Queste variabili sono positivamente associate con il rischio di mortalità. L'Hazard Ratio risulta invece significativamente inferiore a 1 per la variabile "sex". Le restanti variabili hanno un Hazard Ratio non significativamente diverso da 1.
+
+```{r}
+anova(model_cox, model_cox_2, test="LRT")
+```
+
+I due modelli sono significativamente diversi.
+
+```{r}
+ph_test_2 <- cox.zph(model_cox_2)
+print(ph_test_2)
+par(mfrow=c(3,1), mar=c(4,5,1,1), cex.lab = 0.8)
+plot(ph_test_2)
+```
+
+Anche in questo caso l'assunto di costanza dell'Hazard Ratio risulta verificato.
