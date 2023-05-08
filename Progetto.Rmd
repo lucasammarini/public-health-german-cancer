@@ -1,15 +1,24 @@
 ---
-title: "Progetto"
+title: "Public Health Project"
+author: "Julia Bui Xuan, Simone Farallo, Michele Salvaterra, Luca Sammarini, Eugenio Tarolli Bramè"
 output: html_document
-date: "2023-04-14"
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+
+# Preliminary operation
+
+Installazione e caricamento dei pacchetti
+```{r}
+#install.packages("ggpubr", dependencies=TRUE)
+```
+
 ```{r}
 library(ggplot2)
+library(ggpubr)
 library(dplyr)
 library(epitools)
 library(DescTools)
@@ -17,17 +26,367 @@ library(survival)
 library(survminer)
 library(epiR)
 ```
-### Record linkage - prima parte: da 2 a 6
+
+Il presente progetto si propone di esaminare quattro dataset relativi alla situazione sanitaria di una piccola cittadina tedesca nel periodo compreso tra il 1984 e il 1988. I dataset che andremo ad analizzare sono:
+
+1. estratto del **German health registry** per l’anno 1984 relativo ad una piccola cittadina (dataset reale openData modificato). Le variabili che lo compongono sono le seguenti (e sono relative alla situazione del cittadino all’inizio del 1984):
+- idnum: codice identificativo del soggetto
+- smoke (yes or no): se il soggetto fuma
+- sex (Female or Male)
+- married (yes or no): se è coniugato
+- kids (yes or no): se il soggetto ha figli
+- work (yes or no): se lavora
+- education ( no/low = da nessuna a diploma scuola media inferiore;medium/high = diploma scuola media superiore o oltre)
+- age (numerica, in anni)
+
+2. **Registro tumori tedesco**(dataset simulato) relativo al mese di Gennaio 1984. Le variabili che lo compongono sono le seguenti:
+- idnum: codice identificativo del paziente
+- stadio (I, II, III, IV): stadio del tumore alla diagnosi
+- incidenza: data di diagnosi del tumore
+- tipo di tumore: seno, polmone, colon, altro
+- geneticm: fattore genetico (1=positivo, 0=negativo)
+
+3. **Schede di dimissione ospedaliera** dei soggetti ricoverati in Germania tra gennaio 1984 e ottobre 1984 per trattamenti oncologici (dataset simulato):
+- idnum: codice identificativo del soggetto
+- Prestazione: tipo di trattamento ricevuto durante il ricovero (chirurgica, chemioterapica o radioterapica)
+- data prestazione: data del trattamento
+- dimissione: data di dimissione dall’ospedale
+- ospedale: codice univoco dell’ospedale
+
+4. Estratto del **Registro di mortalità** della cittadina tedesca che riporta la mortalità dal 1984 al 1988 e lo stato in vita alla fine del 1988(dataset simulato):
+- idnum: codice identificativo del cittadino
+- dead: stato in vita alla data enddate
+- enddate: data di ultima osservazione (se dead=1 data di morte)
+
+In questa prima fase l'obiettivo è quello di riportare le statistiche descrittive in una tabella per ciascun dataset, con particolare attenzione alla presenza di dati mancanti, incongruenze tra date e record ripetuti che potrebbero creare problemi in fase di linkage e analisi. Saranno segnalati nel report i record con dati ripetuti o incongruenze tra date e saranno eliminati per le analisi successive.
+
+# Loading datasets
+
+```{r}
+cancer<-read.csv("https://raw.githubusercontent.com/lucasammarini/public-health-german-cancer/main/dataset/Cancerregister.csv", header = TRUE, sep =";")
+death<-read.csv("https://raw.githubusercontent.com/lucasammarini/public-health-german-cancer/main/dataset/Deathregister.csv", header = TRUE, sep =";")
+GermanH<-read.csv("https://raw.githubusercontent.com/lucasammarini/public-health-german-cancer/main/dataset/GermanH.csv", header = TRUE, sep =";")
+sdo<-read.csv("https://raw.githubusercontent.com/lucasammarini/public-health-german-cancer/main/dataset/SDO.csv", header = TRUE, sep =";")
+```
+
+
+```{r}
+head(cancer)
+head(death)
+head(GermanH)
+head(sdo)
+```
+
+# Cleaning & Exploration
+
+## Cancer
+
+Controllo dei duplicati.
+```{r}
+cancer$idnum[duplicated(cancer$idnum)]
+cancer[cancer$idnum== 192,]
+cancer[cancer$idnum== 363,]
+cancer[cancer$idnum== 1933,]
+```
+Rimozione dei duplicati.
+```{r}
+cancer <- cancer[-158, ]
+cancer <- cancer[-305,]
+cancer <- cancer[-1637, ]
+```
+Controllo della rimozione dei duplicati.
+```{r}
+cancer[cancer$idnum== 363,]
+cancer[cancer$idnum== 192,]
+cancer[cancer$idnum== 1933,]
+```
+
+Si convertono gli spazi vuoti in valori nulli, poiché essi sono dati mancanti.
+```{r}
+cancer <- data.frame(lapply(cancer, function(x) ifelse(x == "", NA, x)), stringsAsFactors = FALSE)
+```
+
+Controllo e rimozione dei valori nulli.
+```{r}
+sum(is.na(cancer))
+cancer[!complete.cases(cancer),]
+cancer <- na.omit(cancer)
+```
+
+Ordinamento dei dati in base alla data di incidenza del tumore.
+```{r}
+cancer_clean <- cancer[order(cancer$incidenza),]
+head(cancer_clean)
+```
+
+```{r}
+cancer_clean$Stadio <- as.factor(cancer_clean$Stadio)
+cancer_clean$tipotumore <- as.factor(cancer_clean$tipotumore)
+cancer_clean$geneticm <- as.factor(cancer_clean$geneticm)
+cancer_clean$incidenza <- as.Date(cancer_clean$incidenza, tryFormats = "%d/%m/%Y" )
+```
+
+Controllo ed esplorazione del dataset pulito.
+```{r}
+str(cancer_clean)
+summary(cancer_clean)
+```
+
+Esportazione del dataset pulito.
+
+```{r}
+write.csv(cancer_clean, "dataset/Cancerregister_clean.csv", row.names= FALSE)
+```
+
+Si procede all'esplorazione del dataset attraverso alcuni grafici.
+
+Grafico a barre della distribuzione dei pazienti per stadio del tumore.
+
+```{r}
+ggplot(cancer_clean, aes(x=Stadio, fill=Stadio)) +
+  geom_bar() +
+  ylab("Numero di pazienti")
+```
+
+Grafico a barre della distribuzione dei pazienti per tipo di tumore.
+
+```{r}
+ggplot(cancer_clean, aes(x=tipotumore, fill=tipotumore)) +
+  geom_bar()+
+  ylab("Numero di pazienti")+
+  xlab("Tipo di tumore")
+```
+ 
+Grafico a barre della distribuzione dei pazienti per fattore genetico.
+
+```{r}
+ggplot(cancer_clean, aes(x=geneticm, fill=geneticm)) +
+  geom_bar()+
+  ylab("Numero di pazienti")+
+  xlab("Presenza di fattore genetico")
+```
+
+Le due classi sono sbilanciate tra loro.
+
+## Death
+
+```{r}
+str(death)
+```
+
+Correzione del formato delle colonne 'dead' e 'enddate'.
+```{r}
+death$dead = as.factor(death$dead)
+death$enddate = as.Date(death$enddate, tryFormats = "%Y-%m-%d" )
+str(death)
+summary(death)
+dim(death)
+names(death)
+```
+
+Controllo dei dati mancanti.
+```{r}
+sum(is.na(death))
+```
+
+Non sono presenti dati mancanti.
+
+Controllo dei duplicati.
+
+```{r}
+sum(duplicated(death))
+length(unique(death$idnum)) == length(death$idnum)
+```
+
+Non sono presenti duplicati.
+
+Si procede all'esplorazione del dataset attraverso alcuni grafici.
+
+```{r}
+ggplot(death, aes(x = dead, fill = dead)) +
+  geom_bar() +
+  labs(title = "Distribuzione dei decessi", 
+       x = "Stato del paziente (0 = vivo, 1 = morto)", 
+       y = "Numero di pazienti")
+```
+
+## GermanH
+
+```{r cars}
+str(GermanH)
+```
+
+Si analizza quanti valori nulli sono presenti nelle singole colonne.
+
+```{r}
+colSums(is.na(GermanH))
+```
+
+Eliminazione dei valori nulli.
+
+```{r}
+GermanH_ok <- na.omit(GermanH)
+```
+
+Controllo della riuscita.
+
+```{r}
+colSums(is.na(GermanH_ok))
+```
+
+Ricerca dei duplicati.
+
+```{r}
+nrow(GermanH_ok[duplicated(GermanH_ok$idnum),])
+```
+
+Non sono presenti duplicati.
+
+Correzione del formato delle colonne.
+```{r}
+GermanH_ok$smoke <- as.factor(GermanH_ok$smoke)
+GermanH_ok$sex <- as.factor(GermanH_ok$sex)
+GermanH_ok$married <- as.factor(GermanH_ok$married)
+GermanH_ok$kids <- as.factor(GermanH_ok$kids)
+GermanH_ok$work <- as.factor(GermanH_ok$work)
+GermanH_ok$education <- as.factor(GermanH_ok$education)
+str(GermanH_ok)
+summary(GermanH_ok)
+```
+
+Esportazione del dataset pulito.
+
+```{r}
+write.csv(GermanH_ok, "dataset/GermanH_clean.csv", row.names= FALSE)
+```
+
+Esplorazione del dataset pulito attraverso grafici.
+
+```{r}
+colors <- c("#FFA07A", "#ADD8E6")
+```
+
+```{r}
+barplot(table(GermanH_ok$smoke), main="Numero di pazienti per fumo", xlab="Fumatore", ylab="Numero dei pazienti", col= colors)
+```
+
+```{r}
+barplot(table(GermanH_ok$sex), main="Numero di pazienti per genere", xlab="Genere", ylab="Numero dei pazienti", col = colors)
+```
+
+```{r}
+barplot(table(GermanH_ok$married), main="Numero di pazienti per stato sociale", xlab="Coniugato", ylab="Numero dei pazienti", col = colors)
+```
+
+```{r}
+barplot(table(GermanH_ok$kids), main="Numero di pazienti per presenza di figli ", xlab="Ha figli?", ylab="Numero dei pazienti", col= colors)
+```
+
+```{r}
+barplot(table(GermanH_ok$work), main="Numero di pazienti per disoccupazione", xlab="Lavora?", ylab="Numero dei pazienti", col = colors)
+```
+
+```{r}
+ggplot(GermanH_ok, aes(age)) +
+  geom_bar(fill = "#0073C2FF")+xlab('Età')+ylab("Numero dei pazienti")
+```
+
+## SDO
+
+```{r}
+str(sdo)
+summary(sdo)
+```
+
+Ordinamento del dataset.
+```{r}
+sdo <- sdo[order(sdo$idnum), ]
+```
+
+Controllo dei duplicati.
+```{r}
+nrow(sdo[duplicated(sdo$idnum),])
+```
+
+Formattazione delle colonne.
+```{r}
+sdo$Prestazione <- as.factor(sdo$Prestazione)
+sdo$ospedale <- as.factor(sdo$ospedale)
+sdo$dataprestazione <- as.Date(sdo$dataprestazione, '%d/%m/%Y')
+sdo$dimissione <- as.Date(sdo$dimissione, '%d/%m/%Y')
+```
+
+
+```{r}
+summary(sdo)
+```
+
+Controllo dei valori nulli.
+
+```{r}
+nrow(sdo[is.na(sdo$Prestazione),])
+nrow(sdo[is.na(sdo$dataprestazione),])
+sdo[is.na(sdo$dataprestazione),]
+nrow(sdo[is.na(sdo$dimissione),])
+sdo[is.na(sdo$dimissione),]
+nrow(sdo[is.na(sdo$ospedale),])
+```
+
+Eliminazione dei valori nulli.
+
+```{r}
+sdo.no.na <- sdo[!is.na(sdo$dataprestazione) & !is.na(sdo$dimissione), ]
+nrow(sdo.no.na[is.na(sdo.no.na$Prestazione),])
+nrow(sdo.no.na[is.na(sdo.no.na$dataprestazione),])
+nrow(sdo.no.na[is.na(sdo.no.na$dimissione),])
+nrow(sdo.no.na[is.na(sdo.no.na$ospedale),])
+```
+
+Controllo della presenza di incongruenze tra date e rimozione dei valori incongruenti.
+
+```{r}
+nrow(sdo.no.na[sdo.no.na$dataprestazione>sdo.no.na$dimissione, ])
+sdo.no.na[sdo.no.na$dataprestazione>sdo.no.na$dimissione, ]
+sdo.ok <- sdo.no.na[sdo.no.na$dataprestazione<sdo.no.na$dimissione, ]
+```
+
+Statistiche del dataset pulito.
+
+```{r}
+summary(sdo.ok)
+```
+
+Esportazione del dataset pulito.
+
+```{r}
+write.csv(sdo.ok, "dataset/SDO_clean.csv", row.names= FALSE)
+```
+
+Esplorazione del dataset pulito attraverso grafici.
+
+```{r}
+ggplot(sdo, aes(Prestazione)) +
+  geom_bar(fill = "#0073C2FF") +
+  theme_pubclean()+ylab("Numero dei pazienti")
+```
+
+```{r}
+ggplot(sdo, aes(ospedale)) +
+  geom_bar(fill = "#0073C2FF") +
+  theme_pubclean()+ylab("Numero dei pazienti")+xlab("Ospedali")
+```
+
+I dataset sono stati tutti puliti e controllati ed è stata svolta un'analisi esplorativa iniziale. Ora si può passare alla fase di linkage dei dataset per eseguire gli altri task.
+
+### Prima parte: punti da 2 a 6
 
 ##### 2. Effettuare il record-linkage con lo scopo di costruire l’indicatore ‘Intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi’ su base mensile per i casi incidenti nel mese di gennaio 1984.
+
 Denominatore: tutte le pazienti di sesso femminile con tumore al seno insorto tra
 01/01/1984 e 31/01/1984, in stadio I o II, che hanno subito un intervento chirurgico
 Numeratore: tutte le pazienti al denominatore con intervallo tra la data d’incidenza e la data dell’intervento ≤60 giorni
 
 ```{r}
-#data_deaths =read.csv("dataset/Deathregister.csv", header = TRUE, sep =";")
-
-
 data_sdo = read.csv("dataset/SDO_clean.csv", header = TRUE, sep =",")
 
 data_cancer = read.csv("dataset/Cancerregister_clean.csv", header=TRUE, sep = ",")
@@ -102,7 +461,6 @@ indicatore
  L'indicatore è pari a 0.63. La percentuale di interventi entro 60 giorni dalla data di diagnosi è pari al 63%. 
  
 ##### 3. Calcolare l’indicatore ‘Intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi’ per ospedale e darne rappresentazione grafica, includendo come valore di riferimento nel grafico l’indicatore calcolato sull’intero dataset. Per esempi relativi alla rappresentazione grafica fare riferimento al sito Piano Nazionale Esiti (PNE) o siti analoghi trattati a lezione.
-
 
 ```{r}
 table(data$ospedale)
@@ -202,23 +560,26 @@ L'OR di Mantel Haenszel non è significativamente diverso da 1, controllando per
 ##### 6. Stimate l’associazione a livello individuale tra il livello di educazione ed il valore dell’indicatore, aggiustata per tutte le variabili disponibili che ritenete opportuno inserire come potenziali confondenti, mediante un modello di regressione logistica. Interpretate i risultati. Su quanti soggetti avete effettuato l’analisi? Quali variabili sono associate all’indicatore? In che modo?
 
 ```{r}
-#analisi di regressione logistica
-
 modello <- glm(intervento60gg ~ education, data = data, family = binomial())
+summary(modello)
 exp(cbind("OR" = coef(modello), confint.default(modello, level = 0.95)))
+```
 
-#geneticm
+Una delle variabili che si é ritenuto considerare come confondente è "geneticm".
+
+```{r}
 modello_gen<- glm(intervento60gg ~ education + geneticm, data = data, family = binomial())
+summary(modello_gen)
 exp(cbind("OR" = coef(modello_gen), confint.default(modello_gen, level = 0.95)))
 ratio_gen = exp(coef(modello)['educationmedium/high'])/exp(coef(modello_gen)['educationmedium/high'])
 ratio_gen
 ```
 
-Una delle variabili che si é ritenuto considerare come confondente è "geneticm". Ciò nonostante, il rapporto fra l'OR crudo e quello di MH è pari a circa 1.00. Ciò significa che non è un confondente.
+Ciò nonostante, il rapporto fra l'OR crudo e quello di MH è pari a circa 1.00. Ciò significa che non è un confondente.
 
 ```{r}
-#smoke
 modello_stadio <- glm(intervento60gg ~ education + Stadio , data = data, family = binomial())
+summary(modello_stadio)
 exp(cbind("OR" = coef(modello_stadio), confint.default(modello_stadio, level = 0.95)))
 ratio_stadio = exp(coef(modello)['educationmedium/high'])/exp(coef(modello_stadio)['educationmedium/high'])
 ratio_stadio
@@ -226,11 +587,9 @@ ratio_stadio
 
 Un'altra variabile presa in considerazione come possibile confondente è "Stadio". Si osserva che, anche in questo caso, il rapporto tra fra l'OR crudo e quello di MH è pari a circa 0.98. Ciò significa che la variabile non è un confondente.
 
-
 Infine,  si va a controllare per la variabile 'age' suddivisa in 5 intervalli. 
 
 ```{r}
-#age
 classe_1 <- 28
 classe_2 <- 42
 classe_3 <- 56
@@ -239,6 +598,7 @@ classe_5 <- 84
 classe_6 <- 98
 data$age_class <- as.factor(cut(data$age, breaks = c(classe_1, classe_2, classe_3, classe_4, classe_5, classe_6), labels = FALSE))
 modello_age <- glm(intervento60gg ~ education + age_class, data = data, family = binomial())
+summary(modello_age)
 exp(cbind("OR" = coef(modello_age), confint.default(modello_age, level = 0.95)))
 ratio_age = exp(coef(modello)['educationmedium/high'])/exp(coef(modello_age)['educationmedium/high'])
 ratio_age
@@ -254,7 +614,12 @@ dim(data)
 
 Le persone del dataset sono 291.
 
-### Record linkage - seconda parte: dal punto 7 in poi
+Nessuna delle variabili analizzate risulta essere un confondente per la variabile "education".
+La variabile "education", inoltre, non è associata all'indicatore.
+Tuttavia, la variabile "Stadio" risulta essere positivamente associata all'indicatore: l'OR risulta significativamente superiore a 1.
+
+### Seconda parte: punti da 7 a 12
+
 ##### Considerate ora tutti i tumori al colon insorti nel gennaio 1984. Unire i data-set utili per studiare la mortalità del tumore al colon nei soggetti inclusi nell’estrazione del German health Register (dataset 1).
 
 ```{r}
