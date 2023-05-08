@@ -24,7 +24,7 @@ Denominatore: tutte le pazienti di sesso femminile con tumore al seno insorto tr
 01/01/1984 e 31/01/1984, in stadio I o II, che hanno subito un intervento chirurgico
 Numeratore: tutte le pazienti al denominatore con intervallo tra la data d’incidenza e la data dell’intervento ≤60 giorni
 
-```{r cars}
+```{r}
 #data_deaths =read.csv("dataset/Deathregister.csv", header = TRUE, sep =";")
 
 
@@ -584,27 +584,29 @@ Risultano quindi modificatori di effetto le variabili "geneticm", "education" e 
 
 ##### 12. A seguito delle considerazioni effettuate nei punti precedenti scegliete un modello finale per valutare i fattori di rischio della mortalità dopo diagnosi di tumore al colon e commentate i risultati.
 
-Poiché lo studio è uno studio di mortalità, si utilizza il modello di Cox per tenere conto anche dei diversi tempi di mortalità. Come covariate si scelgono le variabili risultate significative nel punto 10. La variabile sex è aggiustata per i confondenti osservati al punto 11.
+Poiché lo studio è uno studio di mortalità, si utilizza il modello di Cox per tenere conto anche dei diversi tempi di mortalità. Come covariate si scelgono le variabili risultate significative nel punto 10.
 
 ```{r}
 model_cox <- coxph(Surv(survtime, I(as.numeric(dead)-1)) ~ relevel(sex, "Male") + geneticm + education + Stadio + smoke + age, data=colon)
 summary(model_cox)
 ```
 
-Il modello di Cox assume che l'Hazard Ratio rimanga costante nel tempo. Si verifica graficamente questo assunto, iniziando dalla variabile sex.
+Il modello di Cox assume che l'Hazard Ratio rimanga costante nel tempo. Si verifica questo assunto.
 
 ```{r}
-stima <- survfit(Surv(survtime, I(as.numeric(dead)-1)) ~ relevel(sex, "Male"), data=colon)
-
-check <- log(-log(stima[sex=1]$surv))
-plot(stima[sex=1]$time, check, type='l', xlab='time', ylab='log(-log(S(t)))', col="blue")
-points(stima[sex=1]$time, check, pch=".", cex=3, col="blue")
-
-check <- log(-log(stima[sex=2]$surv))
-lines(stima[sex=2]$time, check, type='l', col="red")
-points(stima[sex=2]$time, check, pch=".", cex=3, col="red")
-
-legend(x=3.5, y=-4.5, col=c("blue", "red"), legend=c("Male", "Female"), lwd=1)
+ph_test <- cox.zph(model_cox)
+print(ph_test)
+plot(ph_test)
 ```
 
-Palesemente la distanza non è costante. Da capire cosa fare.
+
+```{r}
+model_cox_2 <- coxph(Surv(survtime, I(as.numeric(dead)-1)) ~ relevel(sex, "Male") * geneticm + relevel(sex, "Male") * education + relevel(sex, "Male") * Stadio + smoke + age, data=colon)
+summary(model_cox_2)
+```
+
+```{r}
+ph_test_2 <- cox.zph(model_cox_2)
+print(ph_test_2)
+plot(ph_test_2)
+```
