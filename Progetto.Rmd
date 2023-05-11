@@ -11,10 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Preliminary operation
 
-Installazione e caricamento dei pacchetti
-```{r}
-#install.packages("ggpubr", dependencies=TRUE)
-```
+Caricamento dei pacchetti.
 
 ```{r}
 library(ggplot2)
@@ -39,7 +36,7 @@ Il presente progetto si propone di esaminare quattro dataset relativi alla situa
 - education ( no/low = da nessuna a diploma scuola media inferiore;medium/high = diploma scuola media superiore o oltre)
 - age (numerica, in anni)
 
-2. **Registro tumori tedesco**(dataset simulato) relativo al mese di Gennaio 1984. Le variabili che lo compongono sono le seguenti:
+2. **Registro tumori tedesco** (dataset simulato) relativo al mese di Gennaio 1984. Le variabili che lo compongono sono le seguenti:
 - idnum: codice identificativo del paziente
 - stadio (I, II, III, IV): stadio del tumore alla diagnosi
 - incidenza: data di diagnosi del tumore
@@ -53,12 +50,10 @@ Il presente progetto si propone di esaminare quattro dataset relativi alla situa
 - dimissione: data di dimissione dall’ospedale
 - ospedale: codice univoco dell’ospedale
 
-4. Estratto del **Registro di mortalità** della cittadina tedesca che riporta la mortalità dal 1984 al 1988 e lo stato in vita alla fine del 1988(dataset simulato):
+4. Estratto del **Registro di mortalità** della cittadina tedesca che riporta la mortalità dal 1984 al 1988 e lo stato in vita alla fine del 1988 (dataset simulato):
 - idnum: codice identificativo del cittadino
 - dead: stato in vita alla data enddate
 - enddate: data di ultima osservazione (se dead=1 data di morte)
-
-In questa prima fase l'obiettivo è quello di riportare le statistiche descrittive in una tabella per ciascun dataset, con particolare attenzione alla presenza di dati mancanti, incongruenze tra date e record ripetuti che potrebbero creare problemi in fase di linkage e analisi. Saranno segnalati nel report i record con dati ripetuti o incongruenze tra date e saranno eliminati per le analisi successive.
 
 # Loading datasets
 
@@ -79,7 +74,11 @@ head(sdo)
 
 # Cleaning & Exploration
 
-## Cancer
+#### 1. Esaminare i dati e riportare le statistiche descrittive in una tabella per ciascun dataset. Per le date riportare data minima e data massima. Fare attenzione alla possibilità di dati mancanti, incongruenze tra date, record ripetuti che potrebbero creare problemi in fase di linkage e analisi. I record con dati ripetuti o incongruenze tra date (eg. Data trattamento precedente alla data d’incidenza) devono essere segnalati nel report e poi eliminati per le analisi successive.
+
+In questa prima fase l'obiettivo è quello di riportare le statistiche descrittive in una tabella per ciascun dataset, con particolare attenzione alla presenza di dati mancanti, incongruenze tra date e record ripetuti che potrebbero creare problemi in fase di linkage e analisi. Saranno segnalati nel report i record con dati ripetuti o incongruenze tra date e saranno eliminati per le analisi successive.
+
+#### Cancer
 
 Controllo dei duplicati.
 ```{r}
@@ -88,7 +87,8 @@ cancer[cancer$idnum== 192,]
 cancer[cancer$idnum== 363,]
 cancer[cancer$idnum== 1933,]
 ```
-Rimozione dei duplicati.
+
+Sono presenti tre duplicati; si prosegue alla rimozione.
 ```{r}
 cancer <- cancer[-158, ]
 cancer <- cancer[-305,]
@@ -123,7 +123,7 @@ head(cancer_clean)
 cancer_clean$Stadio <- as.factor(cancer_clean$Stadio)
 cancer_clean$tipotumore <- as.factor(cancer_clean$tipotumore)
 cancer_clean$geneticm <- as.factor(cancer_clean$geneticm)
-cancer_clean$incidenza <- as.Date(cancer_clean$incidenza, tryFormats = "%d/%m/%Y" )
+cancer_clean$incidenza <- as.Date(cancer_clean$incidenza, tryFormats = "%d/%m/%Y")
 ```
 
 Controllo ed esplorazione del dataset pulito.
@@ -145,7 +145,8 @@ Grafico a barre della distribuzione dei pazienti per stadio del tumore.
 ```{r}
 ggplot(cancer_clean, aes(x=Stadio, fill=Stadio)) +
   geom_bar() +
-  ylab("Numero di pazienti")
+  labs(title = "Distribuzione dei decessi per Stadio", 
+       y = "Numero di pazienti")
 ```
 
 Grafico a barre della distribuzione dei pazienti per tipo di tumore.
@@ -153,8 +154,9 @@ Grafico a barre della distribuzione dei pazienti per tipo di tumore.
 ```{r}
 ggplot(cancer_clean, aes(x=tipotumore, fill=tipotumore)) +
   geom_bar()+
-  ylab("Numero di pazienti")+
-  xlab("Tipo di tumore")
+  labs(title = "Distribuzione dei decessi per tipo di tumore", 
+       y = "Numero di pazienti",
+       x = "Tipo di tumore")
 ```
  
 Grafico a barre della distribuzione dei pazienti per fattore genetico.
@@ -162,13 +164,12 @@ Grafico a barre della distribuzione dei pazienti per fattore genetico.
 ```{r}
 ggplot(cancer_clean, aes(x=geneticm, fill=geneticm)) +
   geom_bar()+
-  ylab("Numero di pazienti")+
-  xlab("Presenza di fattore genetico")
+  labs(title = "Distribuzione dei decessi per fattore genetico", 
+       y = "Numero di pazienti",
+       x = "Presenza di fattore genetico (0 = no, 1 = sì)")
 ```
 
-Le due classi sono sbilanciate tra loro.
-
-## Death
+#### Death
 
 ```{r}
 str(death)
@@ -200,7 +201,7 @@ length(unique(death$idnum)) == length(death$idnum)
 
 Non sono presenti duplicati.
 
-Si procede all'esplorazione del dataset attraverso alcuni grafici.
+Si procede all'esplorazione del dataset attraverso un grafico.
 
 ```{r}
 ggplot(death, aes(x = dead, fill = dead)) +
@@ -210,7 +211,7 @@ ggplot(death, aes(x = dead, fill = dead)) +
        y = "Numero di pazienti")
 ```
 
-## GermanH
+#### GermanH
 
 ```{r cars}
 str(GermanH)
@@ -267,7 +268,7 @@ colors <- c("#FFA07A", "#ADD8E6")
 ```
 
 ```{r}
-barplot(table(GermanH_ok$smoke), main="Numero di pazienti per fumo", xlab="Fumatore", ylab="Numero dei pazienti", col= colors)
+barplot(table(GermanH_ok$smoke), main="Numero di pazienti fumatori", xlab="Fumatore", ylab="Numero dei pazienti", col= colors)
 ```
 
 ```{r}
@@ -279,23 +280,23 @@ barplot(table(GermanH_ok$married), main="Numero di pazienti per stato sociale", 
 ```
 
 ```{r}
-barplot(table(GermanH_ok$kids), main="Numero di pazienti per presenza di figli ", xlab="Ha figli?", ylab="Numero dei pazienti", col= colors)
+barplot(table(GermanH_ok$kids), main="Numero di pazienti per presenza di figli", xlab="Presenza di figli", ylab="Numero dei pazienti", col= colors)
 ```
 
 ```{r}
-barplot(table(GermanH_ok$work), main="Numero di pazienti per disoccupazione", xlab="Lavora?", ylab="Numero dei pazienti", col = colors)
+barplot(table(GermanH_ok$work), main="Numero di pazienti per disoccupazione", xlab="Occupazione", ylab="Numero dei pazienti", col = colors)
 ```
 
 ```{r}
 ggplot(GermanH_ok, aes(age)) +
-  geom_bar(fill = "#0073C2FF")+xlab('Età')+ylab("Numero dei pazienti")
+  geom_bar(fill = "#0073C2FF")+xlab('Età')+ylab("Numero dei pazienti")+
+  labs(title = "Distribuzione dei pazienti per età")
 ```
 
-## SDO
+#### SDO
 
 ```{r}
 str(sdo)
-summary(sdo)
 ```
 
 Ordinamento del dataset.
@@ -367,24 +368,29 @@ Esplorazione del dataset pulito attraverso grafici.
 ```{r}
 ggplot(sdo, aes(Prestazione)) +
   geom_bar(fill = "#0073C2FF") +
-  theme_pubclean()+ylab("Numero dei pazienti")
+  theme_pubclean()+
+  ylab("Numero dei pazienti")+
+  labs(title = "Numero di pazienti per prestazione")
 ```
 
 ```{r}
 ggplot(sdo, aes(ospedale)) +
   geom_bar(fill = "#0073C2FF") +
-  theme_pubclean()+ylab("Numero dei pazienti")+xlab("Ospedali")
+  theme_pubclean()+
+  ylab("Numero dei pazienti")+
+  xlab("Ospedali")+
+  labs(title = "Numero di pazienti per ospedale")
 ```
 
 I dataset sono stati tutti puliti e controllati ed è stata svolta un'analisi esplorativa iniziale. Ora si può passare alla fase di linkage dei dataset per eseguire gli altri task.
 
 ### Prima parte: punti da 2 a 6
 
-##### 2. Effettuare il record-linkage con lo scopo di costruire l’indicatore ‘Intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi’ su base mensile per i casi incidenti nel mese di gennaio 1984.
+#### 2. Effettuare il record-linkage con lo scopo di costruire l’indicatore ‘Intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi’ su base mensile per i casi incidenti nel mese di gennaio 1984.
 
-Denominatore: tutte le pazienti di sesso femminile con tumore al seno insorto tra
-01/01/1984 e 31/01/1984, in stadio I o II, che hanno subito un intervento chirurgico
-Numeratore: tutte le pazienti al denominatore con intervallo tra la data d’incidenza e la data dell’intervento ≤60 giorni
+Denominatore: tutte le pazienti di sesso femminile con tumore al seno insorto tra 01/01/1984 e 31/01/1984, in stadio I o II, che hanno subito un intervento chirurgico.
+
+Numeratore: tutte le pazienti al denominatore con intervallo tra la data d'incidenza e la data dell'intervento ≤ 60 giorni.
 
 ```{r}
 data_sdo = read.csv("dataset/SDO_clean.csv", header = TRUE, sep =",")
@@ -416,7 +422,8 @@ dataMerge2$education <- as.factor(dataMerge2$education)
 summary(dataMerge2)
 ```
 
-Per costruire l'indicatore, il denominatore deve soddisfare i seguenti critieri di inclusione:
+Per costruire l'indicatore, il denominatore deve soddisfare i seguenti criteri di inclusione:
+
 1. sex: female
 2. tipotumore: seno
 3. Stadio: Stadio I, Stadio II
@@ -459,23 +466,20 @@ indicatore
 ```
  L'indicatore è pari a 0.55. La percentuale di interventi entro 60 giorni dalla data di diagnosi è pari al 55%. 
  
-##### 3. Calcolare l’indicatore ‘Intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi’ per ospedale e darne rappresentazione grafica, includendo come valore di riferimento nel grafico l’indicatore calcolato sull’intero dataset. Per esempi relativi alla rappresentazione grafica fare riferimento al sito Piano Nazionale Esiti (PNE) o siti analoghi trattati a lezione.
+#### 3. Calcolare l’indicatore ‘Intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi’ per ospedale e darne rappresentazione grafica, includendo come valore di riferimento nel grafico l’indicatore calcolato sull’intero dataset. Per esempi relativi alla rappresentazione grafica fare riferimento al sito Piano Nazionale Esiti (PNE) o siti analoghi trattati a lezione.
 
 ```{r}
 table(data$ospedale)
-#indicatore grezzo
 TT<-table(evento = data$intervento60gg, ospedale = data$ospedale);TT 
-prop.table(TT,2) #indicatore seconda posizione evento 1
+prop.table(TT,2)
 
 
 data$intervento60gg = as.factor(data$intervento60gg)
-#indicatore grezzo
 ggplot(data, aes(x = ospedale, fill = intervento60gg)) +
   geom_bar(position = "fill") +
   xlab("Ospedale") +
   ylab("Frazione eventi") +
   ggtitle("Frazione di eventi per ospedale")
-  theme_classic()
 ```
 
 Come si evince dal grafico sovrastante, gli ospedali 2, 7 e 8 sono quelli con percentuale maggiore relativa alle osservazioni che hanno subito l'evento, rispettivamente pari a 64%, 62% e 63%. L'ospedale 1, invece, presenta la percentuale minore di osservazioni che hanno subito l'evento, pari a 46%.
@@ -504,7 +508,7 @@ bar_plot
 
 Considerando il valore dell'indicatore di riferimento, calcolato in precedenza sull'intero dataset, pari a 0.55, gli ospedali 2, 5, 7, 8 presentano un valore superiore. Invece, gli ospedali 1, 3, 4, 6, 9 presentano un valore inferiore.
 
-##### 4. Utilizzare il dataset ottenuto per valutare l’associazione a livello individuale tra il livello di educazione ed il valore dell’indicatore ‘Intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi’. Quale misura di effetto è possibile stimare? Calcolate ed interpretate tale misura di effetto grezza. Riportare anche la relativa tabella di contingenza.
+#### 4. Utilizzare il dataset ottenuto per valutare l’associazione a livello individuale tra il livello di educazione ed il valore dell’indicatore ‘Intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi’. Quale misura di effetto è possibile stimare? Calcolate ed interpretate tale misura di effetto grezza. Riportare anche la relativa tabella di contingenza.
 
 
 Per valutare l'associazione tra il livello di educazione e l'intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla diagnosi, è possibile utilizzare una tabella di contingenza dove vengono riportati i valori che indicano il numero di casi che rientrano in ogni combinazione di categoria di educazione e di intervento chirurgico.
@@ -537,7 +541,7 @@ exp(cbind("OR" = coef(modello_logistico_seno), confint.default(modello_logistico
 
 I risultati coincidono nei tre metodi utilizzati.
 
-##### 5. Calcolate la stessa misura di effetto, questa volta aggiustata per la sola variabile ‘working’, mediante il metodo Mantel Haenszel. Interpretate il risultato.
+#### 5. Calcolate la stessa misura di effetto, questa volta aggiustata per la sola variabile ‘working’, mediante il metodo Mantel Haenszel. Interpretate il risultato.
 
 
 Per calcolare l'OR tramite il metodo Mantel Haenszel viene costruita una tabella di contingenza per i due gruppi in base allo stato lavorativo. 
@@ -559,9 +563,9 @@ Il test non rifiuta l'ipotesi nulla di omogeneità; si può proseguire nel calco
 OR_adj <- mantelhaen.test(tabella_contingenza_1, conf.level = 0.95)
 OR_adj
 ```
-L'OR di Mantel Haenszel non è significativamente diverso da 1, controllando per la variabile 'working'. Inoltre, il rapporto fra l' ODDS ratio crudo e quello di Mantel Haenszel è pari a circa 1.00. Questo significa che lo stato lavorativo non è un confondente nell'associazione tra il livello di educazione e l'intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi.
+L'OR di Mantel Haenszel non è significativamente diverso da 1, controllando per la variabile 'work'. Inoltre, il rapporto fra l'ODDS ratio crudo e quello di Mantel Haenszel è pari a circa 1.00. Questo significa che lo stato lavorativo non è un confondente nell'associazione tra il livello di educazione e l'intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi.
 
-##### 6. Stimate l’associazione a livello individuale tra il livello di educazione ed il valore dell’indicatore, aggiustata per tutte le variabili disponibili che ritenete opportuno inserire come potenziali confondenti, mediante un modello di regressione logistica. Interpretate i risultati. Su quanti soggetti avete effettuato l’analisi? Quali variabili sono associate all’indicatore? In che modo?
+#### 6. Stimate l’associazione a livello individuale tra il livello di educazione ed il valore dell’indicatore, aggiustata per tutte le variabili disponibili che ritenete opportuno inserire come potenziali confondenti, mediante un modello di regressione logistica. Interpretate i risultati. Su quanti soggetti avete effettuato l’analisi? Quali variabili sono associate all’indicatore? In che modo?
 
 ```{r}
 modello <- glm(intervento60gg ~ education, data = data, family = binomial())
@@ -616,7 +620,7 @@ L'analisi è stata eseguita su tutte le persone del dataset.
 dim(data)
 ```
 
-Le persone del dataset sono 291.
+Le persone del dataset sono 311.
 
 Nessuna delle variabili analizzate risulta essere un confondente per la variabile "education".
 La variabile "education", inoltre, non è associata all'indicatore.
@@ -624,7 +628,7 @@ Tuttavia, la variabile "Stadio" risulta essere positivamente associata all'indic
 
 ### Seconda parte: punti da 7 a 12
 
-##### Considerate ora tutti i tumori al colon insorti nel gennaio 1984. Unire i data-set utili per studiare la mortalità del tumore al colon nei soggetti inclusi nell’estrazione del German health Register (dataset 1).
+#### Considerate ora tutti i tumori al colon insorti nel gennaio 1984. Unire i data-set utili per studiare la mortalità del tumore al colon nei soggetti inclusi nell’estrazione del German health Register (dataset 1).
 
 ```{r}
 data_death = read.csv("dataset/Deathregister.csv", header = TRUE, sep =";")
@@ -651,7 +655,7 @@ dataMerge4$dead <- as.factor(dataMerge4$dead)
 summary(dataMerge4)
 ```
 
-##### 7. Selezionate i record relativi ai tumori al colon e stimate la sopravvivenza a 5 anni. Quanti soggetti sono inclusi nell’analisi? Quanti pazienti sono morti nel periodo di interesse? Riportare graficamente la stima di sopravvivenza nei primi 5 anni dalla diagnosi stimata tramite lo stimatore di Kaplan-Meier. Stimare approssimativamente la sopravvivenza mediana.
+#### 7. Selezionate i record relativi ai tumori al colon e stimate la sopravvivenza a 5 anni. Quanti soggetti sono inclusi nell’analisi? Quanti pazienti sono morti nel periodo di interesse? Riportare graficamente la stima di sopravvivenza nei primi 5 anni dalla diagnosi stimata tramite lo stimatore di Kaplan-Meier. Stimare approssimativamente la sopravvivenza mediana.
 
 ```{r}
 colon <- dataMerge4[dataMerge4$tipotumore=="colon",]
@@ -685,7 +689,7 @@ Nel grafico è riportata la sopravvivenza nei primi 5 anni calcolata con lo stim
 
 La sopravvivenza mediana, come si osserva nel grafico, è poco inferiore a 4 anni.
 
-##### 8. Stimare la sopravvivenza nei primi 5 anni dalla diagnosi per Stadio e effettuare un test d’ipotesi per verificare se l’azzardo di morte sia diverso per stadio di malattia alla diagnosi.
+#### 8. Stimare la sopravvivenza nei primi 5 anni dalla diagnosi per Stadio e effettuare un test d’ipotesi per verificare se l’azzardo di morte sia diverso per stadio di malattia alla diagnosi.
 
 Si stima la sopravvivenza di Kaplan-Meier per stadio, che viene rappresentata graficamente.
 
@@ -706,7 +710,7 @@ survdiff(Surv(survtime,as.numeric(dead)) ~ Stadio,data=colon)
 
 Il test ha un p-value inferiore a 2e-16, dunque si rigetta l'ipotesi nulla: la differenza tra gli azzardi è statisticamente significativa.
 
-##### 9. Applicare un modello per valutare l’associazione tra sesso e mortalità e interpretare la misura di effetto stimata.
+#### 9. Applicare un modello per valutare l’associazione tra sesso e mortalità e interpretare la misura di effetto stimata.
 
 Si applica un modello di regressione logistica per valutare l'associazione.
 
@@ -718,7 +722,7 @@ exp(cbind("OR" = coef(modello), confint.default(modello, level = 0.95)))
 
 La misura di effetto ricavata dal modello è l'ODDS Ratio, pari a 0.65. Ciò significa che gli uomini hanno un valore di ODDS di morte pari al 65% rispetto a quello delle donne.
 
-##### 10. Quali variabili sono associate alla mortalità? Riportare le relative stime di effetto con gli intervalli di confidenza.
+#### 10. Quali variabili sono associate alla mortalità? Riportare le relative stime di effetto con gli intervalli di confidenza.
 
 Per studiare l'associazione tra variabili e mortalità si applica un modello di regressione logistica usando come covariate tutte le variabili del dataset.
 
@@ -730,9 +734,9 @@ exp(cbind("OR" = coef(modello10), confint.default(modello10, level = 0.95)))
 
 Tutte le variabili testate, ad eccezione di "married", "kids" e "work", hanno una associazione significativa con la mortalità, e quindi un OR significativamente diverso da 1.
 
-##### 11. Valutare la presenza di confondenti e/o modificatori di effetto tra le variabili disponibili nel German health register e nel registro tumori nella valutazione dell’associazione tra sesso e mortalità. Se identificate un’interazione tra sesso e un’altra variabile riportare le stime di effetto per maschi e femmine separatamente e commentare il tipo di interazione trovato.
+#### 11. Valutare la presenza di confondenti e/o modificatori di effetto tra le variabili disponibili nel German health register e nel registro tumori nella valutazione dell’associazione tra sesso e mortalità. Se identificate un’interazione tra sesso e un’altra variabile riportare le stime di effetto per maschi e femmine separatamente e commentare il tipo di interazione trovato.
 
-Si studia la correlazione tra morti e sesso, valutando la presenza di confondenti o modificatori tramite stratificazione.
+Si studia la correlazione tra morte e sesso, valutando la presenza di confondenti o modificatori tramite stratificazione.
 
 La prima variabile studiata come eventuale confondente o modificatore di effetto è il fattore genetico.
 
@@ -774,7 +778,7 @@ strat_geneticm_female<-epi.2by2(dat=cont_table_geneticm_female, method="cohort.c
 strat_geneticm_female
 ```
 
-L'effetto del fattore genetico negli uomini è maggiore rispetto alle donne: se si considerano gli uomini come classe di riferimento, l'interazione è positiva.
+L'effetto del fattore genetico negli uomini è minore rispetto alle donne: se si considerano gli uomini come classe di riferimento, l'interazione è positiva.
 
 Si studia ora la variabile "smoke".
 
@@ -885,7 +889,7 @@ strat_education_female<-epi.2by2(dat=cont_table_education_female, method="cohort
 strat_education_female
 ```
 
-L'effetto dell'educazione negli uomini è maggiore rispetto alle donne: se si considerano gli uomini come classe di riferimento, l'interazione è positiva.
+L'effetto dell'educazione negli uomini è minore rispetto alle donne: se si considerano gli uomini come classe di riferimento, l'interazione è positiva.
 
 Si procede ora alla valutazione della variabile "Stadio".
 
@@ -951,7 +955,7 @@ Il rapporto tra i due OR è pari a 1.08. Tenendo come valore limite per il confo
 
 Risultano quindi modificatori di effetto le variabili "geneticm", "education" e "Stadio".
 
-##### 12. A seguito delle considerazioni effettuate nei punti precedenti scegliete un modello finale per valutare i fattori di rischio della mortalità dopo diagnosi di tumore al colon e commentate i risultati.
+#### 12. A seguito delle considerazioni effettuate nei punti precedenti scegliete un modello finale per valutare i fattori di rischio della mortalità dopo diagnosi di tumore al colon e commentate i risultati.
 
 Poiché lo studio è uno studio di mortalità, si utilizza il modello di Cox per tenere conto anche dei diversi tempi di mortalità. Come covariate si scelgono le variabili risultate significative nel punto 10.
 
@@ -960,7 +964,7 @@ model_cox <- coxph(Surv(survtime, I(as.numeric(dead)-1)) ~ relevel(sex, "Male") 
 summary(model_cox)
 ```
 
-I test di ipotesi riportano che il modello di Cox è significativo. In particolare, risultano significative le variabili "sex", "geneticm", "Stadio", "age". "education" è al limite della significatività. "smoke" risulta non significativamente associata.
+I test di ipotesi riportano che il modello di Cox è significativo. In particolare, risultano significative le variabili "sex", "geneticm", "Stadio", "age"; "education" è al limite della significatività; "smoke" risulta non significativamente associata.
 
 L'Hazard Ratio risulta significativamente superiore a 1 per le variabili "geneticm", "Stadio III", "Stadio IV" e "age". Queste variabili sono positivamente associate con il rischio di mortalità. L'Hazard Ratio risulta invece significativamente inferiore a 1 per la variabile "sex". Le restanti variabili hanno un Hazard Ratio non significativamente diverso da 1. 
 
@@ -998,8 +1002,11 @@ I due modelli sono significativamente diversi.
 ```{r}
 ph_test_2 <- cox.zph(model_cox_2)
 print(ph_test_2)
-par(mfrow=c(3,1), mar=c(4,5,1,1), cex.lab = 0.8)
-plot(ph_test_2)
 ```
 
 Anche in questo caso l'assunto di costanza dell'Hazard Ratio risulta verificato.
+
+```{r}
+par(mfrow=c(3,1), mar=c(4,5,1,1), cex.lab = 0.8)
+plot(ph_test_2)
+```
