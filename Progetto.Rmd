@@ -419,17 +419,23 @@ summary(dataMerge2)
 Per costruire l'indicatore, il denominatore deve soddisfare i seguenti critieri di inclusione:
 1. sex: female
 2. tipotumore: seno
+<<<<<<< Updated upstream
 3. Stadio: Stadio II, Stadio III
 4. intervallo di tempo fra diagnosi e intervento = 60 giorni
 5. incidenza: dal 1984-01-01 al 1984-01-31
 6. prestazione: chirurgica
+=======
+3. Stadio: Stadio I, Stadio II
+4. incidenza: dal 1984-01-01 al 1984-01-31
+5. prestazione: chirurgica
+>>>>>>> Stashed changes
 
 Al numeratore invece, verranno incluse solamente le pazienti che hanno subito un intervento entro 60 giorni dalla data d'incidenza. Verrà quindi creata una nuova variabile binaria per indicare la presenza dell'evento o meno.
 
 ```{r}
 #denominatore
 data = dataMerge2[dataMerge2$sex == 'Female',]
-data = data[data$Stadio == 'Stadio II' | data$Stadio == 'Stadio III',]
+data = data[data$Stadio == 'Stadio I' | data$Stadio == 'Stadio II',]
 data = data[data$tipotumore=='seno', ]
 data = data[data$Prestazione=='chirurgica',]
 summary(data)
@@ -458,7 +464,7 @@ prop.table(T1)
 indicatore = T1[2]/(T1[2]+T1[1]) #
 indicatore
 ```
- L'indicatore è pari a 0.63. La percentuale di interventi entro 60 giorni dalla data di diagnosi è pari al 63%. 
+ L'indicatore è pari a 0.55. La percentuale di interventi entro 60 giorni dalla data di diagnosi è pari al 55%. 
  
 ##### 3. Calcolare l’indicatore ‘Intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi’ per ospedale e darne rappresentazione grafica, includendo come valore di riferimento nel grafico l’indicatore calcolato sull’intero dataset. Per esempi relativi alla rappresentazione grafica fare riferimento al sito Piano Nazionale Esiti (PNE) o siti analoghi trattati a lezione.
 
@@ -476,7 +482,7 @@ ggplot(data, aes(x = ospedale, fill = intervento60gg)) +
   theme_classic() 
 ```
 
-Come si evince dal grafico sovrastante, gli ospedali 7 e 8 sono quelli con percentuale maggiore relativa alle osservazioni che hanno subito l'evento, rispettivamente pari a 70% e 73%. L'ospedale 1, invece, presenta la percentuale minore di osservazioni che hanno subito l'evento, pari a 53%.
+Come si evince dal grafico sovrastante, gli ospedali 2, 7 e 8 sono quelli con percentuale maggiore relativa alle osservazioni che hanno subito l'evento, rispettivamente pari a 64, 62% e 63%. L'ospedale 1, invece, presenta la percentuale minore di osservazioni che hanno subito l'evento, pari a 46%.
 
 Nella tabella seguente vengono riportati gli indicatori per ospedale.
 
@@ -501,7 +507,7 @@ bar_plot
 ```
 
  
-Considerando il valore dell'indicatore di riferimento, calcolato in precedenza sull’intero dataset, pari a 0.63, gli ospedali 3, 4, 5, 7, 8 presentano un valore superiore. Invece, gli ospedali 1, 9, 2, 6 presentano un valore inferiore.
+Considerando il valore dell'indicatore di riferimento, calcolato in precedenza sull'intero dataset, pari a 0.55, gli ospedali 2, 5, 7, 8 presentano un valore superiore. Invece, gli ospedali 1, 3, 4, 6, 9 presentano un valore inferiore.
 
 ##### 4. Utilizzare il dataset ottenuto per valutare l’associazione a livello individuale tra il livello di educazione ed il valore dell’indicatore ‘Intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi’. Quale misura di effetto è possibile stimare? Calcolate ed interpretate tale misura di effetto grezza. Riportare anche la relativa tabella di contingenza.
 
@@ -515,14 +521,17 @@ tabella_contingenza
 OR <- (tabella_contingenza[1,1]/tabella_contingenza[1,2])/(tabella_contingenza[2,1]/tabella_contingenza[2,2])
 OR
 ```
-La misura di effetto che è possibile stimare in questo caso è l'odds ratio, esso ci permette di confrontare le probabilità di un evento tra due gruppi. In particolare, in questo caso si vuole confrontare la probabilità che una donna con un basso livello di educazione abbia un intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla diagnosi con la probabilità che una donna con un medio/alto livello di educazione abbia lo stesso intervento entro lo stesso periodo.
+
+La misura di effetto che è possibile stimare in questo caso è l'Odds Ratio, esso ci permette di confrontare le probabilità di un evento tra due gruppi. In particolare, in questo caso si vuole confrontare la probabilità che una donna con un basso livello di educazione abbia un intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla diagnosi con la probabilità che una donna con un medio/alto livello di educazione abbia lo stesso intervento entro lo stesso periodo.
 
 ```{r}
 epitab(data$education, data$intervento60gg, method = c("oddsratio")) 
 ```
-Come si evince dal risultato sovrastante, l'odds ratio è pari a 1.05 con un intervallo di confidenza (0.52, 2.13); poiché l'intervallo di confidenza include il valore 1, non è possibile concludere che l'odds ratio sia significativamente diverso da 1.
+
+Come si evince dal risultato sovrastante, l'odds ratio è pari a 0.97, con un intervallo di confidenza (0.51, 1.87); poiché l'intervallo di confidenza include il valore 1, non è possibile concludere che l'odds ratio sia significativamente diverso da 1.
 
 L'odds ratio può essere calcolato anche attraverso un modello logistico:
+
 ```{r}
 modello_logistico_seno <- glm(intervento60gg ~ education, family = binomial(), data = data)
 # Riepilogo del modello
@@ -555,7 +564,7 @@ Il test non rifiuta l'ipotesi nulla di omogeneità; si può proseguire nel calco
 OR_adj <- mantelhaen.test(tabella_contingenza_1, conf.level = 0.95)
 OR_adj
 ```
-L'OR di Mantel Haenszel non è significativamente diverso da 1, controllando per la variabile 'working'. Inoltre, il rapporto fra l' odds ratio crudo e quello di mantel haenszel è pari a circa 1.00. Questo significa che lo stato lavorativo non è un confondente nell'associazione tra il livello di educazione e l'intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi.
+L'OR di Mantel Haenszel non è significativamente diverso da 1, controllando per la variabile 'working'. Inoltre, il rapporto fra l' odds ratio crudo e quello di Mantel Haenszel è pari a circa 1.00. Questo significa che lo stato lavorativo non è un confondente nell'associazione tra il livello di educazione e l'intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi.
 
 ##### 6. Stimate l’associazione a livello individuale tra il livello di educazione ed il valore dell’indicatore, aggiustata per tutte le variabili disponibili che ritenete opportuno inserire come potenziali confondenti, mediante un modello di regressione logistica. Interpretate i risultati. Su quanti soggetti avete effettuato l’analisi? Quali variabili sono associate all’indicatore? In che modo?
 
@@ -575,7 +584,7 @@ ratio_gen = exp(coef(modello)['educationmedium/high'])/exp(coef(modello_gen)['ed
 ratio_gen
 ```
 
-Ciò nonostante, il rapporto fra l'OR crudo e quello di MH è pari a circa 1.00. Ciò significa che non è un confondente.
+Ciò nonostante, il rapporto fra l'OR crudo e quello di MH è pari a circa 1.04. Ciò significa che non è un confondente.
 
 ```{r}
 modello_stadio <- glm(intervento60gg ~ education + Stadio , data = data, family = binomial())
@@ -585,7 +594,7 @@ ratio_stadio = exp(coef(modello)['educationmedium/high'])/exp(coef(modello_stadi
 ratio_stadio
 ```
 
-Un'altra variabile presa in considerazione come possibile confondente è "Stadio". Si osserva che, anche in questo caso, il rapporto tra fra l'OR crudo e quello di MH è pari a circa 0.98. Ciò significa che la variabile non è un confondente.
+Un'altra variabile presa in considerazione come possibile confondente è "Stadio". Si osserva che, anche in questo caso, il rapporto tra fra l'OR crudo e quello di MH è pari a circa 1.05. Ciò significa che la variabile non è un confondente.
 
 Infine,  si va a controllare per la variabile 'age' suddivisa in 5 intervalli. 
 
