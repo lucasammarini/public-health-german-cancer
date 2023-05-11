@@ -472,10 +472,13 @@ data$intervento60gg = as.factor(data$intervento60gg)
 #indicatore grezzo
 ggplot(data, aes(x = ospedale, fill = intervento60gg)) +
   geom_bar(position = "fill") +
-  theme_classic() 
+  xlab("Ospedale") +
+  ylab("Frazione eventi") +
+  ggtitle("Frazione di eventi per ospedale")
+  theme_classic()
 ```
 
-Come si evince dal grafico sovrastante, gli ospedali 2, 7 e 8 sono quelli con percentuale maggiore relativa alle osservazioni che hanno subito l'evento, rispettivamente pari a 64, 62% e 63%. L'ospedale 1, invece, presenta la percentuale minore di osservazioni che hanno subito l'evento, pari a 46%.
+Come si evince dal grafico sovrastante, gli ospedali 2, 7 e 8 sono quelli con percentuale maggiore relativa alle osservazioni che hanno subito l'evento, rispettivamente pari a 64%, 62% e 63%. L'ospedale 1, invece, presenta la percentuale minore di osservazioni che hanno subito l'evento, pari a 46%.
 
 Nella tabella seguente vengono riportati gli indicatori per ospedale.
 
@@ -499,7 +502,6 @@ bar_plot = ggplot(indice, aes(x = reorder(ospedale, indice), y = indice)) +
 bar_plot
 ```
 
- 
 Considerando il valore dell'indicatore di riferimento, calcolato in precedenza sull'intero dataset, pari a 0.55, gli ospedali 2, 5, 7, 8 presentano un valore superiore. Invece, gli ospedali 1, 3, 4, 6, 9 presentano un valore inferiore.
 
 ##### 4. Utilizzare il dataset ottenuto per valutare l’associazione a livello individuale tra il livello di educazione ed il valore dell’indicatore ‘Intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi’. Quale misura di effetto è possibile stimare? Calcolate ed interpretate tale misura di effetto grezza. Riportare anche la relativa tabella di contingenza.
@@ -515,15 +517,15 @@ OR <- (tabella_contingenza[1,1]/tabella_contingenza[1,2])/(tabella_contingenza[2
 OR
 ```
 
-La misura di effetto che è possibile stimare in questo caso è l'Odds Ratio, esso ci permette di confrontare le probabilità di un evento tra due gruppi. In particolare, in questo caso si vuole confrontare la probabilità che una donna con un basso livello di educazione abbia un intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla diagnosi con la probabilità che una donna con un medio/alto livello di educazione abbia lo stesso intervento entro lo stesso periodo.
+La misura di effetto che è possibile stimare in questo caso è l'ODDS Ratio, esso ci permette di confrontare le probabilità di un evento tra due gruppi. In particolare, in questo caso si vuole confrontare la probabilità che una donna con un basso livello di educazione abbia un intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla diagnosi con la probabilità che una donna con un medio/alto livello di educazione abbia lo stesso intervento entro lo stesso periodo.
 
 ```{r}
 epitab(data$education, data$intervento60gg, method = c("oddsratio")) 
 ```
 
-Come si evince dal risultato sovrastante, l'odds ratio è pari a 0.97, con un intervallo di confidenza (0.51, 1.87); poiché l'intervallo di confidenza include il valore 1, non è possibile concludere che l'odds ratio sia significativamente diverso da 1.
+Come si evince dal risultato sovrastante, l'ODDS ratio è pari a 0.97, con un intervallo di confidenza (0.51, 1.87); poiché l'intervallo di confidenza include il valore 1, non è possibile concludere che l'ODDS ratio sia significativamente diverso da 1.
 
-L'odds ratio può essere calcolato anche attraverso un modello logistico:
+L'ODDS ratio può essere calcolato anche attraverso un modello logistico:
 
 ```{r}
 modello_logistico_seno <- glm(intervento60gg ~ education, family = binomial(), data = data)
@@ -545,7 +547,7 @@ tabella_contingenza_1 <- table(education = data$education, evento = data$interve
 tabella_contingenza_1
 ```
 
-Per verificare la possibilità di utilizzare l'OR di Mantel Haenszel viene utilizzato il test di Breslow-Day, il quale testa l'omogeneità degli odds ratio nei due gruppi.
+Per verificare la possibilità di utilizzare l'OR di Mantel Haenszel viene utilizzato il test di Breslow-Day, il quale testa l'omogeneità degli ODDS ratio nei due gruppi.
 
 ```{r}
 BreslowDayTest(tabella_contingenza_1)
@@ -557,7 +559,7 @@ Il test non rifiuta l'ipotesi nulla di omogeneità; si può proseguire nel calco
 OR_adj <- mantelhaen.test(tabella_contingenza_1, conf.level = 0.95)
 OR_adj
 ```
-L'OR di Mantel Haenszel non è significativamente diverso da 1, controllando per la variabile 'working'. Inoltre, il rapporto fra l' odds ratio crudo e quello di Mantel Haenszel è pari a circa 1.00. Questo significa che lo stato lavorativo non è un confondente nell'associazione tra il livello di educazione e l'intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi.
+L'OR di Mantel Haenszel non è significativamente diverso da 1, controllando per la variabile 'working'. Inoltre, il rapporto fra l' ODDS ratio crudo e quello di Mantel Haenszel è pari a circa 1.00. Questo significa che lo stato lavorativo non è un confondente nell'associazione tra il livello di educazione e l'intervento chirurgico di asportazione del tumore al seno entro 60 giorni dalla data di diagnosi.
 
 ##### 6. Stimate l’associazione a livello individuale tra il livello di educazione ed il valore dell’indicatore, aggiustata per tutte le variabili disponibili che ritenete opportuno inserire come potenziali confondenti, mediante un modello di regressione logistica. Interpretate i risultati. Su quanti soggetti avete effettuato l’analisi? Quali variabili sono associate all’indicatore? In che modo?
 
@@ -714,19 +716,19 @@ summary(modello)
 exp(cbind("OR" = coef(modello), confint.default(modello, level = 0.95)))
 ```
 
-La misura di effetto ricavata dal modello è l'ODDS Ratio, pari a 1.53. Ciò significa che gli uomini hanno un valore di ODDS di morte superiore del 50% rispetto alle donne.
+La misura di effetto ricavata dal modello è l'ODDS Ratio, pari a 0.65. Ciò significa che gli uomini hanno un valore di ODDS di morte pari al 65% rispetto a quello delle donne.
 
 ##### 10. Quali variabili sono associate alla mortalità? Riportare le relative stime di effetto con gli intervalli di confidenza.
 
 Per studiare l'associazione tra variabili e mortalità si applica un modello di regressione logistica usando come covariate tutte le variabili del dataset.
 
 ```{r}
-modello10 <- glm(dead ~ sex + Stadio + geneticm + smoke + married + kids + work + education + age, data = colon, family = binomial())
+modello10 <- glm(dead ~ relevel(sex, "Male") + Stadio + geneticm + smoke + married + kids + work + education + age, data = colon, family = binomial())
 summary(modello10)
 exp(cbind("OR" = coef(modello10), confint.default(modello10, level = 0.95)))
 ```
 
-Le variabili che hanno una associazione significativa con la mortalità, e quindi un OR significativamente diverso da 1, sono tutte quelle testate ad eccezione di "married", "kids" e "work".
+Tutte le variabili testate, ad eccezione di "married", "kids" e "work", hanno una associazione significativa con la mortalità, e quindi un OR significativamente diverso da 1.
 
 ##### 11. Valutare la presenza di confondenti e/o modificatori di effetto tra le variabili disponibili nel German health register e nel registro tumori nella valutazione dell’associazione tra sesso e mortalità. Se identificate un’interazione tra sesso e un’altra variabile riportare le stime di effetto per maschi e femmine separatamente e commentare il tipo di interazione trovato.
 
@@ -772,7 +774,7 @@ strat_geneticm_female<-epi.2by2(dat=cont_table_geneticm_female, method="cohort.c
 strat_geneticm_female
 ```
 
-L'effetto del fattore genetico negli uomini è maggiore rispetto alle donne: se si considerano gli uomini come classe di riferimento, l'interazione è negativa.
+L'effetto del fattore genetico negli uomini è maggiore rispetto alle donne: se si considerano gli uomini come classe di riferimento, l'interazione è positiva.
 
 Si studia ora la variabile "smoke".
 
@@ -883,7 +885,7 @@ strat_education_female<-epi.2by2(dat=cont_table_education_female, method="cohort
 strat_education_female
 ```
 
-L'effetto dell'educazione negli uomini è maggiore rispetto alle donne: se si considerano gli uomini come classe di riferimento, l'interazione è negativa.
+L'effetto dell'educazione negli uomini è maggiore rispetto alle donne: se si considerano gli uomini come classe di riferimento, l'interazione è positiva.
 
 Si procede ora alla valutazione della variabile "Stadio".
 
@@ -904,11 +906,11 @@ I test di omogeneità risultano significativi per entrambe le misure di effetto.
 ```{r}
 model_bin_male <- glm(dead ~ Stadio, data=colon[colon$sex=="Male",], family="binomial")
 summary(model_bin_male)
-exp(cbind("Odds ratio" = coef(model_bin_male), confint.default(model_bin_male, level = 0.95)))
+exp(cbind("ODDS ratio" = coef(model_bin_male), confint.default(model_bin_male, level = 0.95)))
 
 model_bin_female <- glm(dead ~ Stadio, data=colon[colon$sex=="Female",], family="binomial")
 summary(model_bin_female)
-exp(cbind("Odds ratio" = coef(model_bin_female), confint.default(model_bin_female, level = 0.95)))
+exp(cbind("ODDS ratio" = coef(model_bin_female), confint.default(model_bin_female, level = 0.95)))
 ```
 
 Gli uomini hanno un OR minore tra Stadio 1 e 2 e tra Stadio 1 e 3 rispetto alle donne. Hanno invece un OR maggiore tra Stadio 1 e 4 rispetto alle donne.
@@ -923,7 +925,7 @@ model_pois_female <- glm(I(as.numeric(dead)-1) ~ Stadio, data = colon[colon$sex=
 exp(cbind("Relative risk" = coef(model_pois_female), confint.default(model_pois_female, level = 0.95)))
 ```
 
-Gli uomini hanno in tutti i casi un RR minore rispetto alle donne: prendendo come riferimento il livello "Male", si ha dunque una interazione negativa.
+Gli uomini hanno in tutti i casi un RR minore rispetto alle donne: prendendo come riferimento il livello "Male", si ha dunque una interazione positiva.
 
 Si procede ora alla valutazione della variabile "age".
 
@@ -939,8 +941,8 @@ Si osserva che l'interazione non è significativa, secondo il test LRT: age non 
 
 ```{r}
 model3 <- glm(dead ~ relevel(sex, "Male"), data=colon, family="binomial")
-or_crude <- exp(cbind("Crude Odds ratio" = coef(model3), confint.default(model3, level = 0.95)))
-or_mh <- exp(cbind("MH Odds ratio" = coef(model), confint.default(model, level = 0.95)))
+or_crude <- exp(cbind("Crude ODDS ratio" = coef(model3), confint.default(model3, level = 0.95)))
+or_mh <- exp(cbind("MH ODDS ratio" = coef(model), confint.default(model, level = 0.95)))
 ratio <- or_crude[2]/or_mh[2]
 ratio
 ```
